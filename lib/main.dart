@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mediaplayer/media_player.dart';
+import 'package:provider/provider.dart';
+import 'package:mediaplayer/theme/theme_provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,13 +12,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'JSW Media Player',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.orangeAccent),
-        useMaterial3: true,
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp(
+            title: 'Media Player',
+            theme: themeProvider.currentTheme,
+            home: const MediaPlayer(),
+          );
+        },
       ),
-      home: const MediaPlayer(),
     );
   }
 }
