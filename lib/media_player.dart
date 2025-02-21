@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
@@ -5,31 +6,55 @@ import 'package:mediaplayer/media_player_controller.dart';
 import 'package:mediaplayer/playlist.dart';
 import 'package:mediaplayer/slide_page_action.dart';
 import 'package:mediaplayer/theme/theme_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:rxdart/rxdart.dart';
 
-class MediaPlayer extends StatefulWidget {
-  const MediaPlayer({super.key});
+class MediaPlayerViewModel extends ChangeNotifier {
+  List<AudioSource> _songs = [];
+  get songs => _songs;
 
-  @override
-  State<MediaPlayer> createState() => _MediaPlayerState();
+  int _currentIndex = 0;
+
+  set currentIndex(int index) {
+    _currentIndex = index;
+    notifyListeners();
+  }
+
+  late AudioPlayer _audioPlayer;
+  get audioPlayer => _audioPlayer;
+
+  Future<void> _loadLocalSongs() async {
+    final status = await Permission.storage.request();
+    if (status.isGranted) {
+      final files = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        allowMultiple: true,
+      );
+      if (files != null) {
+        _songs = files.paths.map((path) => AudioSource.file(path!)).toList();
+        await _audioPlayer
+            .setAudioSource(ConcatenatingAudioSource(children: _songs));
+      }
+    }
+  }
 }
 
-class _MediaPlayerState extends State<MediaPlayer> {
-  late AudioPlayer _audioPlayer;
-  final _playlist = ConcatenatingAudioSource(children: [
-    AudioSource.uri(
-      Uri.parse(
-          'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'),
-      tag: 'Song 1',
-    ),
-  ]);
+class MediaPlayerView extends StatefulWidget {
+  const MediaPlayerView({super.key});
 
+  @override
+  State<MediaPlayerView> createState() => _MediaPlayerViewState();
+}
+
+class _MediaPlayerViewState extends State<MediaPlayerView> {
+  MediaPlayerViewModel get _mediaPlayer =>
+      Provider.of<MediaPlayerViewModel>(context, listen: false);
   Stream<PositionData> get _positionDataStream =>
       Rx.combineLatest3<Duration, Duration, Duration?, PositionData>(
-        _audioPlayer.positionStream,
-        _audioPlayer.bufferedPositionStream,
-        _audioPlayer.durationStream,
+        _mediaPlayer._audioPlayer.positionStream,
+        _mediaPlayer._audioPlayer.bufferedPositionStream,
+        _mediaPlayer._audioPlayer.durationStream,
         (position, bufferedPosition, duration) => PositionData(
           position: position,
           bufferedPosition: bufferedPosition,
@@ -40,18 +65,18 @@ class _MediaPlayerState extends State<MediaPlayer> {
   @override
   void initState() {
     super.initState();
-    _audioPlayer = AudioPlayer();
+    _mediaPlayer._audioPlayer = AudioPlayer();
     _init();
   }
 
   Future<void> _init() async {
-    await _audioPlayer.setLoopMode(LoopMode.all);
-    await _audioPlayer.setAudioSource(_playlist);
+    await _mediaPlayer._audioPlayer.setLoopMode(LoopMode.all);
+    await _mediaPlayer._audioPlayer.setAudioSource(_mediaPlayer._songs.first);
   }
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
+    _mediaPlayer._audioPlayer.dispose();
     super.dispose();
   }
 
@@ -104,14 +129,14 @@ class _MediaPlayerState extends State<MediaPlayer> {
                         buffered:
                             positionData?.bufferedPosition ?? Duration.zero,
                         total: positionData?.duration ?? Duration.zero,
-                        onSeek: _audioPlayer.seek,
+                        onSeek: _mediaPlayer._audioPlayer.seek,
                       );
                     },
                   ),
                 ],
               ),
               const SizedBox(height: 20),
-              Controls(audioPlayer: _audioPlayer),
+              Controls(audioPlayer: _mediaPlayer._audioPlayer),
               Spacer(),
               SlidePageAction(
                 pageName: Playlist(),
