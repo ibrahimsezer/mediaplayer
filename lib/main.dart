@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mediaplayer/media_player.dart';
+import 'package:mediaplayer/const/const.dart';
+import 'package:mediaplayer/view/media_player_view.dart';
 import 'package:provider/provider.dart';
 import 'package:mediaplayer/theme/theme_provider.dart';
 
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           return MaterialApp(
-            title: 'Media Player',
+            title: ConstTexts.jswMediaPlayer,
             theme: themeProvider.currentTheme,
             home: const MediaPlayerView(),
           );

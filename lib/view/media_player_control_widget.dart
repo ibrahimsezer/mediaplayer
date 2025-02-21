@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
-class Controls extends StatelessWidget {
+class MediaPlayerControlWidget extends StatelessWidget {
   final AudioPlayer audioPlayer;
 
-  const Controls({super.key, required this.audioPlayer});
+  const MediaPlayerControlWidget({super.key, required this.audioPlayer});
 
   @override
   Widget build(BuildContext context) {

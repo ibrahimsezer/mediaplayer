@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:mediaplayer/media_player.dart';
-import 'package:mediaplayer/slide_page_action.dart';
+import 'package:mediaplayer/view/media_player_view.dart';
+import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
+import 'package:mediaplayer/helper/slide_page_action.dart';
 import 'package:provider/provider.dart';
 
-class Playlist extends StatefulWidget {
-  const Playlist({super.key});
+class PlaylistView extends StatefulWidget {
+  const PlaylistView({super.key});
 
   @override
-  State<Playlist> createState() => _PlaylistState();
+  State<PlaylistView> createState() => _PlaylistViewState();
 }
 
-class _PlaylistState extends State<Playlist> {
+class _PlaylistViewState extends State<PlaylistView> {
   Future<void> _playSong(int index) async {
-    final _mediaPlayer =
+    final mediaPlayer =
         Provider.of<MediaPlayerViewModel>(context, listen: false);
-    await _mediaPlayer.audioPlayer.seek(Duration.zero, index: index);
-    _mediaPlayer.audioPlayer.play();
-    _mediaPlayer.currentIndex = index;
+    await mediaPlayer.audioPlayer.seek(Duration.zero, index: index);
+    mediaPlayer.audioPlayer.play();
+    mediaPlayer.currentIndex = index;
   }
 
   @override
