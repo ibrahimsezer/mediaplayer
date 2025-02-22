@@ -37,7 +37,7 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
   void initState() {
     super.initState();
     _mediaPlayer.audioPlayer;
-    _mediaPlayer.loadLocalSongs();
+    _mediaPlayer.loadLocalSongs;
     _init();
   }
 
