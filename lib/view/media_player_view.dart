@@ -9,6 +9,7 @@ import 'package:mediaplayer/helper/slide_page_action.dart';
 import 'package:mediaplayer/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class MediaPlayerView extends StatefulWidget {
   const MediaPlayerView({super.key});
@@ -36,9 +37,42 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
   @override
   void initState() {
     super.initState();
-    _mediaPlayer.audioPlayer;
-    _mediaPlayer.loadLocalSongs;
-    _init();
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    try {
+      if (await _checkAndRequestPermission()) {
+        debugPrint("Storage Permission Granted");
+        await _mediaPlayer.loadLocalSongs;
+        await _init();
+      } else {
+        debugPrint("Storage Permission Denied");
+      }
+    } catch (e) {
+      debugPrint("Failed to get permissions: $e");
+    }
+  }
+
+  Future<bool> _checkAndRequestPermission() async {
+    if (await Permission.storage.status.isGranted) {
+      return true;
+    }
+
+    // For Android 13 (API 33) and above
+    if (await Permission.mediaLibrary.status.isGranted) {
+      return true;
+    }
+
+    // Request the appropriate permission
+    PermissionStatus status;
+    if (await Permission.mediaLibrary.status.isPermanentlyDenied) {
+      status = await Permission.storage.request();
+    } else {
+      status = await Permission.mediaLibrary.request();
+    }
+
+    return status.isGranted;
   }
 
   Future<void> _init() async {
