@@ -44,5 +44,6 @@ class MediaPlayerViewModel extends ChangeNotifier {
       }
     }
   }
+
   get loadLocalSongs => _loadLocalSongs();
 }

@@ -26,18 +26,22 @@ class _PlaylistViewState extends State<PlaylistView> {
         Provider.of<MediaPlayerViewModel>(context, listen: false);
 
     return Scaffold(
-      body: Center(
+      body: SafeArea(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            ListView.builder(
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(mediaPlayer.songs[index].tag?.toString() ??
-                      'Song $index'),
-                  onTap: () => _playSong(index),
-                );
-              },
+            Expanded(
+              child: ListView.builder(
+                itemCount: mediaPlayer.songs.length,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(mediaPlayer.songs[index].tag?.toString() ??
+                        'Song $index'),
+                    onTap: () => _playSong(index),
+                  );
+                },
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(8.0),
