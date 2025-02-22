@@ -1,13 +1,20 @@
 # JSW Media Player
 
-A modern and feature-rich media player application built with Flutter, offering a seamless music playback experience with an intuitive user interface.
+A modern and feature-rich media player application built with Flutter, offering a seamless music playback experience with an intuitive user interface and dynamic theming capabilities.
 
 ## Features
 
+### Core Features
 - Clean and intuitive user interface
-- Music playback controls
-- Playlist management
+- Music playback controls (play, pause, skip, seek)
+- Playlist management with drag-and-drop support
 - Responsive design for various screen sizes
+
+### Advanced Features
+- Dynamic theme switching (Light/Dark mode)
+- Smooth animations and transitions
+- State management using Provider
+- Custom slide page transitions
 
 ## Getting Started
 
@@ -45,8 +52,25 @@ A modern and feature-rich media player application built with Flutter, offering 
 lib/
 ├── assets/        # Contains images and other static assets
 ├── const/         # Constants and configuration files
-├── screens/       # UI screens
-└── widgets/       # Reusable widgets
+├── helper/        # Helper functions and utilities
+├── theme/         # Theme configuration and providers
+├── view/          # UI screens and widgets
+├── viewmodel/     # Business logic and state management
+└── main.dart      # Application entry point
+
+### Key Components
+
+- **Theme System**: Located in `lib/theme/`
+  - `app_theme.dart`: Defines the application's theme data
+  - `theme_provider.dart`: Manages theme state using Provider
+
+- **Media Player**: Located in `lib/view/`
+  - `media_player_view.dart`: Main player interface
+  - `media_player_control_widget.dart`: Playback controls
+  - `playlist_view.dart`: Playlist management interface
+
+- **State Management**: Located in `lib/viewmodel/`
+  - `media_player_viewmodel.dart`: Handles media player state and logic
 ```
 
 ## Contributing
