@@ -97,15 +97,40 @@ class _MediaPlayerViewState extends State<MediaPlayerView> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Consumer<ThemeProvider>(
-                builder: (context, themeProvider, _) {
-                  return IconButton(
-                    icon: Icon(themeProvider.isDarkMode
-                        ? Icons.light_mode
-                        : Icons.dark_mode),
-                    onPressed: () => themeProvider.toggleTheme(),
-                  );
-                },
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, _) {
+                      return IconButton(
+                        icon: Icon(themeProvider.isDarkMode
+                            ? Icons.light_mode
+                            : Icons.dark_mode),
+                        onPressed: () => themeProvider.toggleTheme(),
+                      );
+                    },
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          _mediaPlayer.isShuffleMode
+                              ? Icons.shuffle_on_outlined
+                              : Icons.shuffle,
+                        ),
+                        onPressed: _mediaPlayer.toggleShuffleMode,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          _mediaPlayer.isRepeatMode
+                              ? Icons.repeat_one
+                              : Icons.repeat,
+                        ),
+                        onPressed: _mediaPlayer.toggleRepeatMode,
+                      ),
+                    ],
+                  ),
+                ],
               ),
               SizedBox(
                 height: 48,

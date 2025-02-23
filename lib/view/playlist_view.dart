@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mediaplayer/theme/app_theme.dart';
 import 'package:mediaplayer/view/media_player_view.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
 import 'package:mediaplayer/helper/slide_page_action.dart';
@@ -23,9 +22,6 @@ class _PlaylistViewState extends State<PlaylistView> {
 
   @override
   Widget build(BuildContext context) {
-    final mediaPlayer =
-        Provider.of<MediaPlayerViewModel>(context, listen: false);
-
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -35,20 +31,42 @@ class _PlaylistViewState extends State<PlaylistView> {
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: IconButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                        context,
+                        listen: false);
+                    await mediaPlayer.loadLocalSongs;
+                  },
                   icon: Icon(Icons.add),
                 ),
               ),
               Expanded(
-                child: ListView.builder(
-                  itemCount: mediaPlayer.songs.length,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(mediaPlayer.songs[index].tag?.toString() ??
-                          'Song $index'),
-                      leading: Icon(Icons.music_note),
-                      onTap: () => _playSong(index),
+                child: Consumer<MediaPlayerViewModel>(
+                  builder: (context, mediaPlayer, _) {
+                    return ReorderableListView.builder(
+                      itemCount: mediaPlayer.playlist.length,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      onReorder: mediaPlayer.reorderPlaylist,
+                      itemBuilder: (context, index) {
+                        return Dismissible(
+                          key: ValueKey(index),
+                          background: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding: EdgeInsets.only(right: 16.0),
+                            child: Icon(Icons.delete, color: Colors.white),
+                          ),
+                          direction: DismissDirection.endToStart,
+                          onDismissed: (_) =>
+                              mediaPlayer.removeFromPlaylist(index),
+                          child: ListTile(
+                            title: Text('Song ${index + 1}'),
+                            leading: Icon(Icons.music_note),
+                            trailing: Icon(Icons.drag_handle),
+                            onTap: () => _playSong(index),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
