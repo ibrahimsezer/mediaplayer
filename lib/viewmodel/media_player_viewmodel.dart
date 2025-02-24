@@ -17,11 +17,13 @@ class MediaPlayerViewModel extends ChangeNotifier {
   int _currentIndex = 0;
   bool _isShuffleMode = false;
   bool _isRepeatMode = false;
-  final ConcatenatingAudioSource _playlist = ConcatenatingAudioSource(children: []);
+  final ConcatenatingAudioSource _playlist =
+      ConcatenatingAudioSource(children: []);
 
   get isShuffleMode => _isShuffleMode;
   get isRepeatMode => _isRepeatMode;
   get playlist => _playlist;
+  int get currentIndex => _currentIndex;
 
   set currentIndex(int index) {
     _currentIndex = index;
