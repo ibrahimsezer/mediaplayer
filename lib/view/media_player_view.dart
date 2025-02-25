@@ -5,6 +5,7 @@ import 'package:mediaplayer/const/const.dart';
 import 'package:mediaplayer/view/media_player_control_widget.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
 import 'package:mediaplayer/view/playlist_view.dart';
+import 'package:mediaplayer/view/settings_view.dart';
 import 'package:mediaplayer/helper/slide_page_action.dart';
 import 'package:mediaplayer/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
@@ -163,9 +164,22 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
                 color: Theme.of(context).colorScheme.primary,
               ),
         ),
-        IconButton(
-          icon: Icon(_showQueue ? Icons.queue_music : Icons.playlist_add),
-          onPressed: () => setState(() => _showQueue = !_showQueue),
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsView()),
+                );
+              },
+            ),
+            IconButton(
+              icon: Icon(_showQueue ? Icons.queue_music : Icons.playlist_add),
+              onPressed: () => setState(() => _showQueue = !_showQueue),
+            ),
+          ],
         ),
       ],
     );
