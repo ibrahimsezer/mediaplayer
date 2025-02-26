@@ -1,13 +1,19 @@
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:audio_service/audio_service.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+import 'package:path/path.dart' as path;
 
 class MediaPlayerViewModel extends ChangeNotifier {
-  late AudioHandler _audioHandler;
   List<AudioSource> _songs = [];
+  List<String> _songNames = [];
+  List<MediaItem> _metadata = [];
+
   get songs => _songs;
+  get songNames => _songNames;
+  get metadata => _metadata;
 
   int _currentIndex = 0;
   bool _isShuffleMode = false;
@@ -29,104 +35,36 @@ class MediaPlayerViewModel extends ChangeNotifier {
   get audioPlayer => _audioPlayer;
 
   MediaPlayerViewModel() {
-    _initializeAudioService();
-  }
-
-  Future<void> _initializeAudioService() async {
-    _audioHandler = await AudioService.init(
-      builder: () => MyAudioHandler(),
-      config: AudioServiceConfig(
-        androidNotificationChannelId: 'com.example.mediaplayer.channel.audio',
-        androidNotificationChannelName: 'Media Player',
-        androidNotificationOngoing: false,
-        androidStopForegroundOnPause: true,
-        notificationColor: Colors.blue,
-        androidShowNotificationBadge: true,
-        artDownscaleWidth: 300,
-        artDownscaleHeight: 300,
-      ),
-    );
-    await _initializePlayer();
+    _initializePlayer();
   }
 
   Future<void> _initializePlayer() async {
-    _playlist.addAll(_songs);
-    await _audioPlayer.setAudioSource(_playlist);
-    await _audioPlayer.setLoopMode(LoopMode.off);
+    try {
+      await _playlist.addAll(_songs);
+      await _audioPlayer.setAudioSource(_playlist);
+      await _audioPlayer.setLoopMode(LoopMode.off);
 
-    // Listen to player state changes
-    _audioPlayer.playerStateStream.listen((playerState) {
-      _updatePlaybackState(playerState);
-    });
+      // Listen to current song changes
+      _audioPlayer.currentIndexStream.listen((index) {
+        if (index != null) {
+          _currentIndex = index;
+          notifyListeners();
+        }
+      });
 
-    // Listen to current song changes
-    _audioPlayer.currentIndexStream.listen((index) {
-      if (index != null) {
-        _currentIndex = index;
-        _updateMediaItem();
+      // Listen to playlist changes
+      _audioPlayer.sequenceStateStream.listen((_) {
         notifyListeners();
-      }
-    });
-  }
+      });
 
-  void _updatePlaybackState(PlayerState playerState) {
-    final playing = playerState.playing;
-    final processingState = playerState.processingState;
-
-    AudioProcessingState audioProcessingState;
-    if (processingState == ProcessingState.loading ||
-        processingState == ProcessingState.buffering) {
-      audioProcessingState = AudioProcessingState.buffering;
-    } else if (processingState == ProcessingState.ready) {
-      audioProcessingState = AudioProcessingState.ready;
-    } else if (processingState == ProcessingState.completed) {
-      audioProcessingState = AudioProcessingState.completed;
-    } else {
-      audioProcessingState = AudioProcessingState.idle;
-    }
-
-    final newState = PlaybackState(
-      controls: [
-        MediaControl.skipToPrevious,
-        if (playing) MediaControl.pause else MediaControl.play,
-        MediaControl.stop,
-        MediaControl.skipToNext,
-      ],
-      systemActions: const {
-        MediaAction.seek,
-        MediaAction.seekForward,
-        MediaAction.seekBackward,
-      },
-      androidCompactActionIndices: const [0, 1, 3],
-      processingState: audioProcessingState,
-      playing: playing,
-      updatePosition: _audioPlayer.position,
-      bufferedPosition: _audioPlayer.bufferedPosition,
-      speed: _audioPlayer.speed,
-    );
-
-    (_audioHandler as BaseAudioHandler).playbackState.add(newState);
-  }
-
-  void _updateMediaItem() {
-    if (_currentIndex >= 0 && _currentIndex < _songs.length) {
-      final mediaItem = MediaItem(
-        id: _currentIndex.toString(),
-        album: "Unknown Album",
-        title: "Song ${_currentIndex + 1}",
-        artist: "Unknown Artist",
-      );
-      (_audioHandler as BaseAudioHandler).mediaItem.add(mediaItem);
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error initializing player: $e");
     }
   }
 
   Future<void> _loadLocalSongs() async {
-    if (_audioHandler == null) {
-      await _initializeAudioService();
-    }
-
     try {
-      // Request both storage permissions for better compatibility
       final storageStatus = await Permission.storage.request();
       final audioStatus = await Permission.audio.request();
 
@@ -137,25 +75,42 @@ class MediaPlayerViewModel extends ChangeNotifier {
         );
 
         if (result != null && result.paths.isNotEmpty) {
-          // Clear existing songs and playlist
-          _songs.clear();
-          await _playlist.clear();
+          List<AudioSource> newSongs = [];
 
-          // Add new songs
-          _songs = result.paths
-              .where((path) => path != null)
-              .map((path) => AudioSource.file(path!))
-              .toList();
+          // Add new songs and their metadata
+          for (String? filePath in result.paths) {
+            if (filePath != null) {
+              final fileName = path.basename(filePath);
+              final title = fileName.contains('.')
+                  ? fileName.substring(0, fileName.lastIndexOf('.'))
+                  : fileName;
 
-          // Add songs to playlist
-          await _playlist.addAll(_songs);
+              final mediaItem = MediaItem(
+                id: filePath,
+                album: "Local Audio",
+                title: title,
+                artist: "Unknown Artist",
+                artUri: null,
+              );
 
-          // Set the audio source if it's the first time
+              final audioSource = AudioSource.uri(
+                Uri.file(filePath),
+                tag: mediaItem,
+              );
+
+              newSongs.add(audioSource);
+              _songs.add(audioSource);
+              _songNames.add(title);
+              _metadata.add(mediaItem);
+            }
+          }
+
+          await _playlist.addAll(newSongs);
+
           if (_audioPlayer.audioSource == null) {
             await _audioPlayer.setAudioSource(_playlist);
           }
 
-          _updateMediaItem();
           notifyListeners();
         }
       } else {
@@ -184,71 +139,90 @@ class MediaPlayerViewModel extends ChangeNotifier {
   }
 
   Future<void> addToPlaylist(String filePath) async {
-    final audioSource = AudioSource.file(filePath);
-    await _playlist.add(audioSource);
-    notifyListeners();
+    try {
+      final fileName = path.basename(filePath);
+      final title = fileName.contains('.')
+          ? fileName.substring(0, fileName.lastIndexOf('.'))
+          : fileName;
+
+      final mediaItem = MediaItem(
+        id: filePath,
+        album: "Local Audio",
+        title: title,
+        artist: "Unknown Artist",
+        artUri: null,
+      );
+
+      final audioSource = AudioSource.uri(
+        Uri.file(filePath),
+        tag: mediaItem,
+      );
+
+      _songs.add(audioSource);
+      _songNames.add(title);
+      _metadata.add(mediaItem);
+
+      await _playlist.add(audioSource);
+
+      if (_audioPlayer.audioSource == null) {
+        await _audioPlayer.setAudioSource(_playlist);
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error adding to playlist: $e");
+      rethrow;
+    }
   }
 
   Future<void> removeFromPlaylist(int index) async {
-    await _playlist.removeAt(index);
-    notifyListeners();
+    try {
+      if (index >= 0 && index < _songs.length) {
+        await _playlist.removeAt(index);
+        _songs.removeAt(index);
+        _songNames.removeAt(index);
+        _metadata.removeAt(index);
+
+        if (_songs.isEmpty) {
+          _currentIndex = 0;
+        } else if (_currentIndex >= _songs.length) {
+          _currentIndex = _songs.length - 1;
+        }
+
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error removing from playlist: $e");
+      rethrow;
+    }
   }
 
   Future<void> reorderPlaylist(int oldIndex, int newIndex) async {
-    await _playlist.move(oldIndex, newIndex);
-    notifyListeners();
-  }
-}
+    try {
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
 
-class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
-  @override
-  Future<void> play() async {
-    playbackState.add(PlaybackState(
-      controls: [
-        MediaControl.pause,
-        MediaControl.stop,
-        MediaControl.skipToPrevious,
-        MediaControl.skipToNext,
-      ],
-      systemActions: const {
-        MediaAction.seek,
-        MediaAction.seekForward,
-        MediaAction.seekBackward,
-      },
-      androidCompactActionIndices: const [0, 1, 3],
-      processingState: AudioProcessingState.ready,
-      playing: true,
-    ));
-  }
+      if (oldIndex >= 0 &&
+          oldIndex < _songs.length &&
+          newIndex >= 0 &&
+          newIndex < _songs.length) {
+        await _playlist.move(oldIndex, newIndex);
 
-  @override
-  Future<void> pause() async {
-    playbackState.add(PlaybackState(
-      controls: [
-        MediaControl.play,
-        MediaControl.stop,
-        MediaControl.skipToPrevious,
-        MediaControl.skipToNext,
-      ],
-      systemActions: const {
-        MediaAction.seek,
-        MediaAction.seekForward,
-        MediaAction.seekBackward,
-      },
-      androidCompactActionIndices: const [0, 1, 3],
-      processingState: AudioProcessingState.ready,
-      playing: false,
-    ));
-  }
+        final song = _songs.removeAt(oldIndex);
+        _songs.insert(newIndex, song);
 
-  @override
-  Future<void> stop() async {
-    playbackState.add(PlaybackState(
-      controls: [],
-      systemActions: const {},
-      androidCompactActionIndices: const [],
-      processingState: AudioProcessingState.idle,
-      playing: false,
-    ));
+        final name = _songNames.removeAt(oldIndex);
+        _songNames.insert(newIndex, name);
+
+        final meta = _metadata.removeAt(oldIndex);
+        _metadata.insert(newIndex, meta);
+
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error reordering playlist: $e");
+      rethrow;
+    }
   }
 }

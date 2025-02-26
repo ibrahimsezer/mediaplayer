@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
 import 'package:provider/provider.dart';
 
@@ -114,22 +115,26 @@ class _PlaylistViewState extends State<PlaylistView> {
   }
 
   Widget _buildPlaylist(MediaPlayerViewModel mediaPlayer) {
-    final filteredPlaylist =
-        mediaPlayer.playlist.sequence.asMap().entries.where((entry) {
-      final songTitle = 'Song ${entry.key + 1}'.toLowerCase();
-      return songTitle.contains(_searchQuery);
+    final filteredIndices = List<int>.generate(
+      mediaPlayer.playlist.sequence.length,
+      (index) => index,
+    ).where((index) {
+      if (index >= mediaPlayer.songNames.length) return false;
+      final songName = mediaPlayer.songNames[index].toLowerCase();
+      return songName.contains(_searchQuery);
     }).toList();
 
     return ReorderableListView.builder(
-      itemCount: filteredPlaylist.length,
+      itemCount: filteredIndices.length,
       padding: const EdgeInsets.symmetric(vertical: 8),
       onReorder: mediaPlayer.reorderPlaylist,
       itemBuilder: (context, index) {
-        final entry = filteredPlaylist[index];
-        final isPlaying = mediaPlayer.currentIndex == entry.key;
+        final originalIndex = filteredIndices[index];
+        final isPlaying = mediaPlayer.currentIndex == originalIndex;
+        final songName = mediaPlayer.songNames[originalIndex];
 
         return Dismissible(
-          key: ValueKey(entry.key),
+          key: ValueKey(originalIndex),
           background: Container(
             color: Colors.red,
             alignment: Alignment.centerRight,
@@ -137,7 +142,7 @@ class _PlaylistViewState extends State<PlaylistView> {
             child: Icon(Icons.delete, color: Colors.white),
           ),
           direction: DismissDirection.endToStart,
-          onDismissed: (_) => mediaPlayer.removeFromPlaylist(entry.key),
+          onDismissed: (_) => mediaPlayer.removeFromPlaylist(originalIndex),
           child: Card(
             elevation: isPlaying ? 4 : 1,
             margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -146,13 +151,15 @@ class _PlaylistViewState extends State<PlaylistView> {
                 : null,
             child: ListTile(
               title: Text(
-                'Song ${entry.key + 1}',
+                songName,
                 style: TextStyle(
                   fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               subtitle: Text(
-                'Unknown Artist', // Replace with actual metadata when available
+                'Local Audio',
                 style: TextStyle(fontSize: 12),
               ),
               leading: Stack(
@@ -183,12 +190,12 @@ class _PlaylistViewState extends State<PlaylistView> {
                 children: [
                   IconButton(
                     icon: Icon(Icons.more_vert),
-                    onPressed: () => _showSongOptions(context, entry.key),
+                    onPressed: () => _showSongOptions(context, originalIndex),
                   ),
                   Icon(Icons.drag_handle),
                 ],
               ),
-              onTap: () => _playSong(entry.key),
+              onTap: () => _playSong(originalIndex),
             ),
           ),
         );
