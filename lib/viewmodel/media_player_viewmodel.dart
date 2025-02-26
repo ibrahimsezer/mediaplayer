@@ -2,16 +2,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:audio_service/audio_service.dart';
 
 class MediaPlayerViewModel extends ChangeNotifier {
-  List<AudioSource> _songs = [
-    AudioSource.uri(Uri.parse(
-        'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3')),
-    AudioSource.uri(Uri.parse(
-        'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3')),
-    AudioSource.uri(Uri.parse(
-        'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3')),
-  ];
+  late AudioHandler _audioHandler;
+  List<AudioSource> _songs = [];
   get songs => _songs;
 
   int _currentIndex = 0;
@@ -34,37 +29,147 @@ class MediaPlayerViewModel extends ChangeNotifier {
   get audioPlayer => _audioPlayer;
 
   MediaPlayerViewModel() {
-    _initializePlayer();
+    _initializeAudioService();
   }
 
-  void _initializePlayer() {
+  Future<void> _initializeAudioService() async {
+    _audioHandler = await AudioService.init(
+      builder: () => MyAudioHandler(),
+      config: AudioServiceConfig(
+        androidNotificationChannelId: 'com.example.mediaplayer.channel.audio',
+        androidNotificationChannelName: 'Media Player',
+        androidNotificationOngoing: false,
+        androidStopForegroundOnPause: true,
+        notificationColor: Colors.blue,
+        androidShowNotificationBadge: true,
+        artDownscaleWidth: 300,
+        artDownscaleHeight: 300,
+      ),
+    );
+    await _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
     _playlist.addAll(_songs);
-    _audioPlayer.setAudioSource(_playlist);
-    _audioPlayer.setLoopMode(LoopMode.off);
-  }
+    await _audioPlayer.setAudioSource(_playlist);
+    await _audioPlayer.setLoopMode(LoopMode.off);
 
-  Future<void> _loadLocalSongs() async {
-    final status = await Permission.storage.request();
-    if (status.isGranted) {
-      final files = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
-        allowMultiple: true,
-      );
+    // Listen to player state changes
+    _audioPlayer.playerStateStream.listen((playerState) {
+      _updatePlaybackState(playerState);
+    });
 
-      if (files != null && files.paths.isNotEmpty) {
-        _songs = files.paths
-            .where((path) => path != null)
-            .map((path) => AudioSource.file(path!))
-            .toList();
-
-        await _audioPlayer
-            .setAudioSource(ConcatenatingAudioSource(children: _songs));
+    // Listen to current song changes
+    _audioPlayer.currentIndexStream.listen((index) {
+      if (index != null) {
+        _currentIndex = index;
+        _updateMediaItem();
         notifyListeners();
       }
+    });
+  }
+
+  void _updatePlaybackState(PlayerState playerState) {
+    final playing = playerState.playing;
+    final processingState = playerState.processingState;
+
+    AudioProcessingState audioProcessingState;
+    if (processingState == ProcessingState.loading ||
+        processingState == ProcessingState.buffering) {
+      audioProcessingState = AudioProcessingState.buffering;
+    } else if (processingState == ProcessingState.ready) {
+      audioProcessingState = AudioProcessingState.ready;
+    } else if (processingState == ProcessingState.completed) {
+      audioProcessingState = AudioProcessingState.completed;
+    } else {
+      audioProcessingState = AudioProcessingState.idle;
+    }
+
+    final newState = PlaybackState(
+      controls: [
+        MediaControl.skipToPrevious,
+        if (playing) MediaControl.pause else MediaControl.play,
+        MediaControl.stop,
+        MediaControl.skipToNext,
+      ],
+      systemActions: const {
+        MediaAction.seek,
+        MediaAction.seekForward,
+        MediaAction.seekBackward,
+      },
+      androidCompactActionIndices: const [0, 1, 3],
+      processingState: audioProcessingState,
+      playing: playing,
+      updatePosition: _audioPlayer.position,
+      bufferedPosition: _audioPlayer.bufferedPosition,
+      speed: _audioPlayer.speed,
+    );
+
+    (_audioHandler as BaseAudioHandler).playbackState.add(newState);
+  }
+
+  void _updateMediaItem() {
+    if (_currentIndex >= 0 && _currentIndex < _songs.length) {
+      final mediaItem = MediaItem(
+        id: _currentIndex.toString(),
+        album: "Unknown Album",
+        title: "Song ${_currentIndex + 1}",
+        artist: "Unknown Artist",
+      );
+      (_audioHandler as BaseAudioHandler).mediaItem.add(mediaItem);
     }
   }
 
-  get loadLocalSongs => _loadLocalSongs();
+  Future<void> _loadLocalSongs() async {
+    if (_audioHandler == null) {
+      await _initializeAudioService();
+    }
+
+    try {
+      // Request both storage permissions for better compatibility
+      final storageStatus = await Permission.storage.request();
+      final audioStatus = await Permission.audio.request();
+
+      if (storageStatus.isGranted || audioStatus.isGranted) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.audio,
+          allowMultiple: true,
+        );
+
+        if (result != null && result.paths.isNotEmpty) {
+          // Clear existing songs and playlist
+          _songs.clear();
+          await _playlist.clear();
+
+          // Add new songs
+          _songs = result.paths
+              .where((path) => path != null)
+              .map((path) => AudioSource.file(path!))
+              .toList();
+
+          // Add songs to playlist
+          await _playlist.addAll(_songs);
+
+          // Set the audio source if it's the first time
+          if (_audioPlayer.audioSource == null) {
+            await _audioPlayer.setAudioSource(_playlist);
+          }
+
+          _updateMediaItem();
+          notifyListeners();
+        }
+      } else {
+        debugPrint("Permission denied");
+      }
+    } catch (e) {
+      debugPrint("Error loading songs: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> loadLocalSongs() async {
+    await _loadLocalSongs();
+  }
 
   void toggleShuffleMode() {
     _isShuffleMode = !_isShuffleMode;
@@ -92,5 +197,58 @@ class MediaPlayerViewModel extends ChangeNotifier {
   Future<void> reorderPlaylist(int oldIndex, int newIndex) async {
     await _playlist.move(oldIndex, newIndex);
     notifyListeners();
+  }
+}
+
+class MyAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
+  @override
+  Future<void> play() async {
+    playbackState.add(PlaybackState(
+      controls: [
+        MediaControl.pause,
+        MediaControl.stop,
+        MediaControl.skipToPrevious,
+        MediaControl.skipToNext,
+      ],
+      systemActions: const {
+        MediaAction.seek,
+        MediaAction.seekForward,
+        MediaAction.seekBackward,
+      },
+      androidCompactActionIndices: const [0, 1, 3],
+      processingState: AudioProcessingState.ready,
+      playing: true,
+    ));
+  }
+
+  @override
+  Future<void> pause() async {
+    playbackState.add(PlaybackState(
+      controls: [
+        MediaControl.play,
+        MediaControl.stop,
+        MediaControl.skipToPrevious,
+        MediaControl.skipToNext,
+      ],
+      systemActions: const {
+        MediaAction.seek,
+        MediaAction.seekForward,
+        MediaAction.seekBackward,
+      },
+      androidCompactActionIndices: const [0, 1, 3],
+      processingState: AudioProcessingState.ready,
+      playing: false,
+    ));
+  }
+
+  @override
+  Future<void> stop() async {
+    playbackState.add(PlaybackState(
+      controls: [],
+      systemActions: const {},
+      androidCompactActionIndices: const [],
+      processingState: AudioProcessingState.idle,
+      playing: false,
+    ));
   }
 }
