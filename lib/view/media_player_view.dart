@@ -11,6 +11,7 @@ import 'package:mediaplayer/theme/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
 class MediaPlayerView extends StatefulWidget {
   const MediaPlayerView({super.key});
@@ -115,9 +116,48 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
         }
       },
       child: Scaffold(
+        appBar: AppBar(
+          leading: Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return IconButton(
+                icon: Icon(themeProvider.isDarkMode
+                    ? Icons.light_mode
+                    : Icons.dark_mode),
+                onPressed: () => themeProvider.toggleTheme(),
+              );
+            },
+          ),
+          centerTitle: true,
+          title: Text(
+            ConstTexts.jswMediaPlayer,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsView()),
+                );
+              },
+            ), /*
+            Consumer<MediaPlayerViewModel>(builder: (context, mediaPlayer, _) {
+              final bool hasNoSongs = mediaPlayer.songs.isEmpty;
+              return IconButton(
+                icon: Icon(_showQueue ? Icons.queue_music : Icons.playlist_add),
+                onPressed: hasNoSongs
+                    ? null
+                    : () => setState(() => _showQueue = !_showQueue),
+              );
+            }),*/
+          ],
+        ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Consumer<MediaPlayerViewModel>(
             builder: (context, mediaPlayer, _) {
               final bool hasNoSongs = mediaPlayer.songs.isEmpty;
@@ -175,7 +215,6 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    _buildTopBar(),
                     SizedBox(height: 24),
                     _buildNowPlayingTitle(),
                     SizedBox(height: 32),
@@ -202,9 +241,7 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
     return Consumer<MediaPlayerViewModel>(
       builder: (context, mediaPlayer, _) {
         final bool hasNoSongs = mediaPlayer.songs.isEmpty;
-
         return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, _) {
@@ -222,25 +259,20 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
                     color: Theme.of(context).colorScheme.primary,
                   ),
             ),
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.settings),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SettingsView()),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon:
-                      Icon(_showQueue ? Icons.queue_music : Icons.playlist_add),
-                  onPressed: hasNoSongs
-                      ? null
-                      : () => setState(() => _showQueue = !_showQueue),
-                ),
-              ],
+            IconButton(
+              icon: Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsView()),
+                );
+              },
+            ),
+            IconButton(
+              icon: Icon(_showQueue ? Icons.queue_music : Icons.playlist_add),
+              onPressed: hasNoSongs
+                  ? null
+                  : () => setState(() => _showQueue = !_showQueue),
             ),
           ],
         );
@@ -249,13 +281,10 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
   }
 
   Widget _buildNowPlayingTitle() {
-    return StreamBuilder<SequenceState?>(
-      stream: _mediaPlayerViewModel.audioPlayer.sequenceStateStream,
-      builder: (context, snapshot) {
-        final state = snapshot.data;
-        if (state?.sequence.isEmpty ?? true) return SizedBox();
+    return Consumer<MediaPlayerViewModel>(
+      builder: (context, mediaPlayer, _) {
+        if (mediaPlayer.songs.isEmpty) return SizedBox();
 
-        final metadata = state?.currentSource;
         return Column(
           children: [
             Text(
@@ -264,10 +293,13 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
             ),
             SizedBox(height: 8),
             Text(
-              'Song ${_mediaPlayerViewModel.currentIndex + 1}',
+              mediaPlayer.songNames[mediaPlayer.currentIndex],
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         );
@@ -276,30 +308,51 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
   }
 
   Widget _buildAlbumArt() {
-    return Hero(
-      tag: 'album_art',
-      child: Container(
-        width: 280,
-        height: 280,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: Offset(0, 10),
+    return Consumer<MediaPlayerViewModel>(
+      builder: (context, mediaPlayer, _) {
+        final hasNoSongs = mediaPlayer.songs.isEmpty;
+        final currentMetadata =
+            hasNoSongs ? null : mediaPlayer.metadata[mediaPlayer.currentIndex];
+
+        return Hero(
+          tag: 'album_art',
+          child: Container(
+            width: 280,
+            height: 280,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: Offset(0, 10),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Image(
-            image: AssetImage(AssetNames.defaultMusicLogo),
-            fit: BoxFit.cover,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: currentMetadata?.artUri != null
+                  ? Image.file(
+                      File(currentMetadata!.artUri!.path),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.asset(
+                          AssetNames.defaultMusicLogo,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    )
+                  : Image.asset(
+                      AssetNames.defaultMusicLogo,
+                      fit: BoxFit.cover,
+                    ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -428,51 +481,114 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
   }
 
   Widget _buildQueuePeek() {
-    return Container(
-      height: 120,
-      margin: EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: StreamBuilder<SequenceState?>(
-        stream: _mediaPlayerViewModel.audioPlayer.sequenceStateStream,
-        builder: (context, snapshot) {
-          final state = snapshot.data;
-          if (state?.sequence.isEmpty ?? true) {
-            return Center(child: Text('Queue is empty'));
-          }
-
-          return ListView.builder(
-            itemCount: state!.sequence.length,
-            itemBuilder: (context, index) {
-              final isPlaying = index == _mediaPlayerViewModel.currentIndex;
-              return ListTile(
-                dense: true,
-                leading: Icon(
-                  isPlaying ? Icons.play_arrow : Icons.music_note,
-                  color:
-                      isPlaying ? Theme.of(context).colorScheme.primary : null,
+    return Consumer<MediaPlayerViewModel>(
+      builder: (context, mediaPlayer, _) {
+        if (mediaPlayer.playlist.sequence.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Playlist is empty',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey,
                 ),
-                title: Text(
-                  'Song ${index + 1}',
-                  style: TextStyle(
-                    fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-                onTap: () => _playSong(index),
-              );
-            },
+              ),
+            ),
           );
-        },
-      ),
+        }
+
+        return Container(
+          height: 130,
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Up Next (${mediaPlayer.songNames.length} songs)',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: mediaPlayer.songNames.length,
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemBuilder: (context, index) {
+                    final isPlaying = index == mediaPlayer.currentIndex;
+                    final metadata = mediaPlayer.metadata[index];
+                    final songName = mediaPlayer.songNames[index];
+
+                    return Container(
+                      width: 150,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: isPlaying
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isPlaying
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.grey.withOpacity(0.2),
+                        ),
+                      ),
+                      child: InkWell(
+                        onTap: () => _playSong(index),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              isPlaying ? Icons.play_arrow : Icons.music_note,
+                              color: isPlaying
+                                  ? Theme.of(context).colorScheme.primary
+                                  : null,
+                              size: 32,
+                            ),
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: Text(
+                                songName,
+                                style: TextStyle(
+                                  fontWeight: isPlaying
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isPlaying
+                                      ? Theme.of(context).colorScheme.primary
+                                      : null,
+                                ),
+                                maxLines: 2,
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
