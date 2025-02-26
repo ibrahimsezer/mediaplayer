@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mediaplayer/view/media_player_view.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
-import 'package:mediaplayer/helper/slide_page_action.dart';
 import 'package:provider/provider.dart';
 
 class PlaylistView extends StatefulWidget {
@@ -46,13 +44,13 @@ class _PlaylistViewState extends State<PlaylistView> {
                   return _buildPlaylist(mediaPlayer);
                 },
               ),
-            ),
+            ), /*
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: SlidePageAction(
                 pageName: MediaPlayerView(),
               ),
-            )
+            )*/
           ],
         ),
       ),
@@ -60,45 +58,36 @@ class _PlaylistViewState extends State<PlaylistView> {
   }
 
   Widget _buildAppBar() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'My Playlist',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                onPressed: () async {
-                  final mediaPlayer = Provider.of<MediaPlayerViewModel>(
-                    context,
-                    listen: false,
-                  );
-                  await mediaPlayer.loadLocalSongs;
-                },
-                icon: Icon(Icons.add),
-                tooltip: 'Add Songs',
-              ),
-              IconButton(
-                onPressed: () {
-                  // Show sort options dialog
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => _buildSortOptionsSheet(),
-                  );
-                },
-                icon: Icon(Icons.sort),
-                tooltip: 'Sort Playlist',
-              ),
-            ],
-          ),
-        ],
-      ),
+    return AppBar(
+      actions: [
+        IconButton(
+          onPressed: () async {
+            try {
+              final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                context,
+                listen: false,
+              );
+              await mediaPlayer.loadLocalSongs();
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error loading songs: $e')),
+              );
+            }
+          },
+          icon: Icon(Icons.add),
+          tooltip: 'Add Songs',
+        ),
+        IconButton(
+          onPressed: () {
+            showModalBottomSheet(
+              context: context,
+              builder: (context) => _buildSortOptionsSheet(),
+            );
+          },
+          icon: Icon(Icons.sort),
+          tooltip: 'Sort Playlist',
+        ),
+      ],
     );
   }
 
@@ -232,11 +221,17 @@ class _PlaylistViewState extends State<PlaylistView> {
           SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () async {
-              final mediaPlayer = Provider.of<MediaPlayerViewModel>(
-                context,
-                listen: false,
-              );
-              await mediaPlayer.loadLocalSongs;
+              try {
+                final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                  context,
+                  listen: false,
+                );
+                await mediaPlayer.loadLocalSongs();
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error loading songs: $e')),
+                );
+              }
             },
             icon: Icon(Icons.add),
             label: Text('Add Songs'),

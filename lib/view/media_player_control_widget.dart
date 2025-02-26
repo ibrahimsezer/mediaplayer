@@ -3,8 +3,13 @@ import 'package:just_audio/just_audio.dart';
 
 class MediaPlayerControlWidget extends StatelessWidget {
   final AudioPlayer audioPlayer;
+  final bool isEnabled;
 
-  const MediaPlayerControlWidget({super.key, required this.audioPlayer});
+  const MediaPlayerControlWidget({
+    super.key,
+    required this.audioPlayer,
+    this.isEnabled = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,13 +39,15 @@ class MediaPlayerControlWidget extends StatelessWidget {
               return IconButton(
                 icon: const Icon(Icons.play_arrow),
                 iconSize: 64.0,
-                onPressed: audioPlayer.play,
+                onPressed: isEnabled ? audioPlayer.play : null,
+                color: isEnabled ? null : Colors.grey,
               );
             } else {
               return IconButton(
                 icon: const Icon(Icons.pause),
                 iconSize: 64.0,
-                onPressed: audioPlayer.pause,
+                onPressed: isEnabled ? audioPlayer.pause : null,
+                color: isEnabled ? null : Colors.grey,
               );
             }
           },
