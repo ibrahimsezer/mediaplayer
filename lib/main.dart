@@ -4,9 +4,27 @@ import 'package:mediaplayer/view/media_player_view.dart';
 import 'package:provider/provider.dart';
 import 'package:mediaplayer/theme/theme_provider.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.example.mediaplayer.channel.audio',
+    androidNotificationChannelName: 'Media Player',
+    androidNotificationOngoing: true,
+    androidShowNotificationBadge: true,
+  );
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => MediaPlayerViewModel()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -14,20 +32,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => MediaPlayerViewModel()),
-      ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
-          return MaterialApp(
-            title: ConstTexts.jswMediaPlayer,
-            theme: themeProvider.currentTheme,
-            home: const MediaPlayerView(),
-          );
-        },
-      ),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: ConstTexts.jswMediaPlayer,
+          theme: themeProvider.currentTheme,
+          home: const MediaPlayerView(),
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }
