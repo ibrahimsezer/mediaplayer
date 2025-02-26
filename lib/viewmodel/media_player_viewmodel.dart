@@ -7,9 +7,9 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path/path.dart' as path;
 
 class MediaPlayerViewModel extends ChangeNotifier {
-  List<AudioSource> _songs = [];
-  List<String> _songNames = [];
-  List<MediaItem> _metadata = [];
+  final List<AudioSource> _songs = [];
+  final List<String> _songNames = [];
+  final List<MediaItem> _metadata = [];
 
   get songs => _songs;
   get songNames => _songNames;
