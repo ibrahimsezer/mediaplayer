@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
@@ -37,6 +36,7 @@ class _PlaylistViewState extends State<PlaylistView> {
           children: [
             _buildAppBar(),
             _buildSearchBar(),
+            _buildPlaylistTabs(),
             Expanded(
               child: Consumer<MediaPlayerViewModel>(
                 builder: (context, mediaPlayer, _) {
@@ -70,6 +70,11 @@ class _PlaylistViewState extends State<PlaylistView> {
         },
       ),
       actions: [
+        IconButton(
+          onPressed: () => _showCreatePlaylistDialog(),
+          icon: Icon(Icons.playlist_add),
+          tooltip: 'Create Playlist',
+        ),
         IconButton(
           onPressed: () async {
             try {
@@ -119,6 +124,134 @@ class _PlaylistViewState extends State<PlaylistView> {
             _searchQuery = value.toLowerCase();
           });
         },
+      ),
+    );
+  }
+
+  Widget _buildPlaylistTabs() {
+    return Consumer<MediaPlayerViewModel>(
+      builder: (context, mediaPlayer, _) {
+        return Container(
+          height: 100,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 16.0, top: 8.0),
+                child: Text(
+                  'Your Playlists',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  children: [
+                    // All Songs Card
+                    _buildPlaylistCard(
+                      context,
+                      'All Songs',
+                      mediaPlayer.songNames.length,
+                      isSelected: mediaPlayer.currentPlaylist == null,
+                      onTap: () async {
+                        try {
+                          await mediaPlayer.switchToPlaylist('All Songs');
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Error switching playlist: $e')),
+                          );
+                        }
+                      },
+                    ),
+                    // User Created Playlists
+                    ...mediaPlayer.playlists.entries.map(
+                      (entry) => _buildPlaylistCard(
+                        context,
+                        entry.key,
+                        entry.value.length,
+                        isSelected: mediaPlayer.currentPlaylist == entry.key,
+                        onTap: () async {
+                          try {
+                            await mediaPlayer.switchToPlaylist(entry.key);
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Error switching playlist: $e')),
+                            );
+                          }
+                        },
+                        onLongPress: () =>
+                            _showPlaylistOptions(context, entry.key),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlaylistCard(
+    BuildContext context,
+    String name,
+    int songCount, {
+    bool isSelected = false,
+    VoidCallback? onTap,
+    VoidCallback? onLongPress,
+  }) {
+    return Container(
+      width: 150,
+      margin: EdgeInsets.symmetric(horizontal: 4),
+      child: Card(
+        elevation: isSelected ? 4 : 1,
+        color:
+            isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.playlist_play,
+                  size: 24,
+                  color:
+                      isSelected ? Theme.of(context).colorScheme.primary : null,
+                ),
+                SizedBox(height: 4),
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '$songCount songs',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : null,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -328,6 +461,9 @@ class _PlaylistViewState extends State<PlaylistView> {
   }
 
   void _showSongOptions(BuildContext context, int index) {
+    final mediaPlayer =
+        Provider.of<MediaPlayerViewModel>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -339,28 +475,232 @@ class _PlaylistViewState extends State<PlaylistView> {
               leading: Icon(Icons.play_arrow),
               title: Text('Play Next'),
               onTap: () {
-                // Implement play next
+                // TODO: Implement play next
                 Navigator.pop(context);
               },
             ),
             ListTile(
               leading: Icon(Icons.playlist_add),
-              title: Text('Add to Another Playlist'),
+              title: Text('Add to Playlist'),
               onTap: () {
-                // Implement add to playlist
                 Navigator.pop(context);
+                _showAddToPlaylistDialog(index);
               },
             ),
             ListTile(
               leading: Icon(Icons.info),
               title: Text('Song Info'),
               onTap: () {
-                // Show song info
+                // TODO: Show song info
                 Navigator.pop(context);
               },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showAddToPlaylistDialog(int songIndex) {
+    final mediaPlayer =
+        Provider.of<MediaPlayerViewModel>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Add to Playlist'),
+        content: Container(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...mediaPlayer.playlists.keys.map(
+                (playlistName) => ListTile(
+                  leading: Icon(Icons.playlist_play),
+                  title: Text(playlistName),
+                  onTap: () async {
+                    try {
+                      final audioSource = mediaPlayer.songs[songIndex];
+                      if (audioSource is IndexedAudioSource) {
+                        final uri = (audioSource as UriAudioSource).uri;
+                        await mediaPlayer.addToPlaylist(playlistName, uri.path);
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text('Song added to "$playlistName"')),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text('Error adding song to playlist: $e')),
+                      );
+                    }
+                  },
+                ),
+              ),
+              Divider(),
+              ListTile(
+                leading: Icon(Icons.add),
+                title: Text('Create New Playlist'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showCreatePlaylistDialog();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCreatePlaylistDialog() {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Create New Playlist'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: 'Enter playlist name',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Please enter a playlist name')),
+                );
+                return;
+              }
+
+              try {
+                final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                  context,
+                  listen: false,
+                );
+                await mediaPlayer.createPlaylist(name);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Playlist "$name" created')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error creating playlist: $e')),
+                );
+              }
+            },
+            child: Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPlaylistOptions(BuildContext context, String playlistName) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.edit),
+              title: Text('Rename Playlist'),
+              onTap: () {
+                Navigator.pop(context);
+                _showRenamePlaylistDialog(playlistName);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete),
+              title: Text('Delete Playlist'),
+              onTap: () async {
+                try {
+                  final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                    context,
+                    listen: false,
+                  );
+                  await mediaPlayer.deletePlaylist(playlistName);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Playlist "$playlistName" deleted')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error deleting playlist: $e')),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRenamePlaylistDialog(String oldName) {
+    final TextEditingController controller =
+        TextEditingController(text: oldName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Rename Playlist'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: 'Enter new playlist name',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Please enter a playlist name')),
+                );
+                return;
+              }
+
+              try {
+                final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                  context,
+                  listen: false,
+                );
+                await mediaPlayer.renamePlaylist(oldName, newName);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Playlist renamed to "$newName"')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error renaming playlist: $e')),
+                );
+              }
+            },
+            child: Text('Rename'),
+          ),
+        ],
       ),
     );
   }
