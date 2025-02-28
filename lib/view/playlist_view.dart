@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
 import 'package:provider/provider.dart';
+import 'package:just_audio/just_audio.dart';
 
 class PlaylistView extends StatefulWidget {
   const PlaylistView({super.key});
@@ -60,6 +61,14 @@ class _PlaylistViewState extends State<PlaylistView> {
 
   Widget _buildAppBar() {
     return AppBar(
+      title: Consumer<MediaPlayerViewModel>(
+        builder: (context, mediaPlayer, _) {
+          return Text(
+            mediaPlayer.currentPlaylist ?? 'All Songs',
+            style: Theme.of(context).textTheme.titleLarge,
+          );
+        },
+      ),
       actions: [
         IconButton(
           onPressed: () async {
@@ -257,25 +266,60 @@ class _PlaylistViewState extends State<PlaylistView> {
           ListTile(
             leading: Icon(Icons.sort_by_alpha),
             title: Text('Sort by Name'),
-            onTap: () {
-              // Implement sort by name
-              Navigator.pop(context);
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.access_time),
-            title: Text('Sort by Duration'),
-            onTap: () {
-              // Implement sort by duration
-              Navigator.pop(context);
+            onTap: () async {
+              try {
+                final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                  context,
+                  listen: false,
+                );
+                await mediaPlayer.sortByName();
+                Navigator.pop(context);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error sorting playlist: $e')),
+                );
+                Navigator.pop(context);
+              }
             },
           ),
           ListTile(
             leading: Icon(Icons.calendar_today),
-            title: Text('Sort by Date Added'),
-            onTap: () {
-              // Implement sort by date
-              Navigator.pop(context);
+            title: Text('Sort by Date Added (Newest First)'),
+            onTap: () async {
+              try {
+                final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                  context,
+                  listen: false,
+                );
+                await mediaPlayer.sortByDateAdded();
+                Navigator.pop(context);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error sorting playlist: $e')),
+                );
+                Navigator.pop(context);
+              }
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.calendar_today),
+            title: Text('Sort by Date Added (Oldest First)'),
+            onTap: () async {
+              try {
+                final mediaPlayer = Provider.of<MediaPlayerViewModel>(
+                  context,
+                  listen: false,
+                );
+                // First sort by newest, then reverse
+                await mediaPlayer.sortByDateAdded();
+                await mediaPlayer.sortByDateAdded();
+                Navigator.pop(context);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error sorting playlist: $e')),
+                );
+                Navigator.pop(context);
+              }
             },
           ),
         ],
