@@ -131,8 +131,8 @@ class _PlaylistViewState extends State<PlaylistView> {
   Widget _buildPlaylistTabs() {
     return Consumer<MediaPlayerViewModel>(
       builder: (context, mediaPlayer, _) {
-        return Container(
-          height: 100,
+        return SizedBox(
+          height: 150,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -353,7 +353,7 @@ class _PlaylistViewState extends State<PlaylistView> {
           Icon(
             Icons.music_note,
             size: 64,
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
           ),
           SizedBox(height: 16),
           Text(
