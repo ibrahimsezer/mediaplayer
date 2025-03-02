@@ -4,25 +4,27 @@ import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path/path.dart' as path;
+import 'package:mediaplayer/model/song_model.dart';
 
 class MediaPlayerViewModel extends ChangeNotifier {
-  final List<AudioSource> _songs = [];
-  final List<String> _songNames = [];
-  final List<MediaItem> _metadata = [];
+  final List<SongModel> _songs = [];
 
-  get songs => _songs;
-  get songNames => _songNames;
-  get metadata => _metadata;
+  List<SongModel> get songs => _songs;
+  List<String> get songNames => _songs.map((song) => song.title).toList();
+  List<MediaItem> get metadata => _songs.map((song) => song.metadata).toList();
+  List<AudioSource> get audioSources => _songs.map((song) => song.audioSource).toList();
 
   int _currentIndex = 0;
   bool _isShuffleMode = false;
   bool _isRepeatMode = false;
-  final ConcatenatingAudioSource _playlist =
-      ConcatenatingAudioSource(children: []);
+  late final ConcatenatingAudioSource _playlist;
+  
+  // Initialize the playlist
+  ConcatenatingAudioSource get playlist => _playlist;
 
   get isShuffleMode => _isShuffleMode;
   get isRepeatMode => _isRepeatMode;
-  get playlist => _playlist;
+
   int get currentIndex => _currentIndex;
 
   set currentIndex(int index) {
@@ -34,22 +36,24 @@ class MediaPlayerViewModel extends ChangeNotifier {
   get audioPlayer => _audioPlayer;
 
   // Map to store multiple playlists
-  final Map<String, List<AudioSource>> _playlists = {};
-  final Map<String, List<String>> _playlistNames = {};
-  final Map<String, List<MediaItem>> _playlistMetadata = {};
+  final Map<String, List<SongModel>> _playlists = {};
   String? _currentPlaylist;
 
-  Map<String, List<String>> get playlists => _playlistNames;
+  Map<String, List<String>> get playlists => 
+      _playlists.map((key, value) => MapEntry(key, value.map((song) => song.title).toList()));
   String? get currentPlaylist => _currentPlaylist;
 
   MediaPlayerViewModel() {
+    _playlist = ConcatenatingAudioSource(children: []);
     _initializePlayer();
   }
 
   Future<void> _initializePlayer() async {
     try {
-      await _playlist.addAll(_songs);
-      await _audioPlayer.setAudioSource(_playlist);
+      if (_songs.isNotEmpty) {
+        await _playlist.addAll(audioSources);
+        await _audioPlayer.setAudioSource(_playlist);
+      }
       await _audioPlayer.setLoopMode(LoopMode.off);
 
       // Listen to current song changes
@@ -83,37 +87,22 @@ class MediaPlayerViewModel extends ChangeNotifier {
         );
 
         if (result != null && result.paths.isNotEmpty) {
-          List<AudioSource> newSongs = [];
+          List<SongModel> newSongs = [];
+          List<AudioSource> newAudioSources = [];
 
           // Add new songs and their metadata
           for (String? filePath in result.paths) {
             if (filePath != null) {
-              final fileName = path.basename(filePath);
-              final title = fileName.contains('.')
-                  ? fileName.substring(0, fileName.lastIndexOf('.'))
-                  : fileName;
-
-              final mediaItem = MediaItem(
-                id: filePath,
-                album: "Local Audio",
-                title: title,
-                artist: "Unknown Artist",
-                artUri: null,
-              );
-
-              final audioSource = AudioSource.uri(
-                Uri.file(filePath),
-                tag: mediaItem,
-              );
-
-              newSongs.add(audioSource);
-              _songs.add(audioSource);
-              _songNames.add(title);
-              _metadata.add(mediaItem);
+              // Create a SongModel from the file path
+              final songModel = SongModel.fromFilePath(filePath);
+              
+              newSongs.add(songModel);
+              _songs.add(songModel);
+              newAudioSources.add(songModel.audioSource);
             }
           }
 
-          await _playlist.addAll(newSongs);
+          await _playlist.addAll(newAudioSources);
 
           if (_audioPlayer.audioSource == null) {
             await _audioPlayer.setAudioSource(_playlist);
@@ -152,8 +141,6 @@ class MediaPlayerViewModel extends ChangeNotifier {
     }
 
     _playlists[name] = [];
-    _playlistNames[name] = [];
-    _playlistMetadata[name] = [];
     notifyListeners();
   }
 
@@ -163,31 +150,14 @@ class MediaPlayerViewModel extends ChangeNotifier {
         throw Exception('Playlist not found');
       }
 
-      final fileName = path.basename(filePath);
-      final title = fileName.contains('.')
-          ? fileName.substring(0, fileName.lastIndexOf('.'))
-          : fileName;
-
-      final mediaItem = MediaItem(
-        id: filePath,
-        album: "Local Audio",
-        title: title,
-        artist: "Unknown Artist",
-        artUri: null,
-      );
-
-      final audioSource = AudioSource.uri(
-        Uri.file(filePath),
-        tag: mediaItem,
-      );
-
-      _playlists[playlistName]!.add(audioSource);
-      _playlistNames[playlistName]!.add(title);
-      _playlistMetadata[playlistName]!.add(mediaItem);
+      // Create a SongModel from the file path
+      final songModel = SongModel.fromFilePath(filePath);
+      
+      _playlists[playlistName]!.add(songModel);
 
       // If this is the current playlist, update the main playlist
       if (_currentPlaylist == playlistName) {
-        await _playlist.add(audioSource);
+        await _playlist.add(songModel.audioSource);
       }
 
       notifyListeners();
@@ -204,14 +174,11 @@ class MediaPlayerViewModel extends ChangeNotifier {
       }
 
       _songs.clear();
-      _songNames.clear();
-      _metadata.clear();
       await _playlist.clear();
 
       _songs.addAll(_playlists[playlistName]!);
-      _songNames.addAll(_playlistNames[playlistName]!);
-      _metadata.addAll(_playlistMetadata[playlistName]!);
-      await _playlist.addAll(_playlists[playlistName]!);
+      List<AudioSource> audioSources = _songs.map((song) => song.audioSource).toList();
+      await _playlist.addAll(audioSources);
 
       _currentPlaylist = playlistName;
       _currentIndex = 0;
@@ -234,14 +201,10 @@ class MediaPlayerViewModel extends ChangeNotifier {
       }
 
       _playlists.remove(playlistName);
-      _playlistNames.remove(playlistName);
-      _playlistMetadata.remove(playlistName);
 
       if (_currentPlaylist == playlistName) {
         _currentPlaylist = null;
         _songs.clear();
-        _songNames.clear();
-        _metadata.clear();
         await _playlist.clear();
         _currentIndex = 0;
       }
@@ -258,8 +221,6 @@ class MediaPlayerViewModel extends ChangeNotifier {
       if (index >= 0 && index < _songs.length) {
         await _playlist.removeAt(index);
         _songs.removeAt(index);
-        _songNames.removeAt(index);
-        _metadata.removeAt(index);
 
         if (_songs.isEmpty) {
           _currentIndex = 0;
@@ -290,12 +251,6 @@ class MediaPlayerViewModel extends ChangeNotifier {
         final song = _songs.removeAt(oldIndex);
         _songs.insert(newIndex, song);
 
-        final name = _songNames.removeAt(oldIndex);
-        _songNames.insert(newIndex, name);
-
-        final meta = _metadata.removeAt(oldIndex);
-        _metadata.insert(newIndex, meta);
-
         notifyListeners();
       }
     } catch (e) {
@@ -308,7 +263,7 @@ class MediaPlayerViewModel extends ChangeNotifier {
     try {
       final indices = List.generate(_songs.length, (index) => index);
       indices.sort((a, b) =>
-          _songNames[a].toLowerCase().compareTo(_songNames[b].toLowerCase()));
+          _songs[a].title.toLowerCase().compareTo(_songs[b].title.toLowerCase()));
 
       await _reorderPlaylistByIndices(indices);
       notifyListeners();
@@ -336,25 +291,17 @@ class MediaPlayerViewModel extends ChangeNotifier {
   Future<void> _reorderPlaylistByIndices(List<int> indices) async {
     if (indices.isEmpty) return;
 
-    final newSongs = <AudioSource>[];
-    final newNames = <String>[];
-    final newMetadata = <MediaItem>[];
+    final newSongs = <SongModel>[];
 
     for (final index in indices) {
       newSongs.add(_songs[index]);
-      newNames.add(_songNames[index]);
-      newMetadata.add(_metadata[index]);
     }
 
     _songs.clear();
-    _songNames.clear();
-    _metadata.clear();
     await _playlist.clear();
 
     _songs.addAll(newSongs);
-    _songNames.addAll(newNames);
-    _metadata.addAll(newMetadata);
-    await _playlist.addAll(newSongs);
+    await _playlist.addAll(newSongs.map((song) => song.audioSource).toList());
 
     if (_currentIndex >= _songs.length) {
       _currentIndex = 0;
@@ -371,16 +318,9 @@ class MediaPlayerViewModel extends ChangeNotifier {
       }
 
       final songs = _playlists[oldName]!;
-      final names = _playlistNames[oldName]!;
-      final metadata = _playlistMetadata[oldName]!;
 
       _playlists.remove(oldName);
-      _playlistNames.remove(oldName);
-      _playlistMetadata.remove(oldName);
-
       _playlists[newName] = songs;
-      _playlistNames[newName] = names;
-      _playlistMetadata[newName] = metadata;
 
       if (_currentPlaylist == oldName) {
         _currentPlaylist = newName;

@@ -293,7 +293,7 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
             ),
             SizedBox(height: 8),
             Text(
-              mediaPlayer.songNames[mediaPlayer.currentIndex],
+              mediaPlayer.songs[mediaPlayer.currentIndex].title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -311,8 +311,8 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
     return Consumer<MediaPlayerViewModel>(
       builder: (context, mediaPlayer, _) {
         final hasNoSongs = mediaPlayer.songs.isEmpty;
-        final currentMetadata =
-            hasNoSongs ? null : mediaPlayer.metadata[mediaPlayer.currentIndex];
+        final currentSong =
+            hasNoSongs ? null : mediaPlayer.songs[mediaPlayer.currentIndex];
 
         return Hero(
           tag: 'album_art',
@@ -334,9 +334,9 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: currentMetadata?.artUri != null
+              child: currentSong?.artworkUri != null
                   ? Image.file(
-                      File(currentMetadata!.artUri!.path),
+                      File(currentSong!.artworkUri!.path),
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Image.asset(

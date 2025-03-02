@@ -258,11 +258,10 @@ class _PlaylistViewState extends State<PlaylistView> {
 
   Widget _buildPlaylist(MediaPlayerViewModel mediaPlayer) {
     final filteredIndices = List<int>.generate(
-      mediaPlayer.playlist.sequence.length,
+      mediaPlayer.songs.length,
       (index) => index,
     ).where((index) {
-      if (index >= mediaPlayer.songNames.length) return false;
-      final songName = mediaPlayer.songNames[index].toLowerCase();
+      final songName = mediaPlayer.songs[index].title.toLowerCase();
       return songName.contains(_searchQuery);
     }).toList();
 
@@ -273,7 +272,7 @@ class _PlaylistViewState extends State<PlaylistView> {
       itemBuilder: (context, index) {
         final originalIndex = filteredIndices[index];
         final isPlaying = mediaPlayer.currentIndex == originalIndex;
-        final songName = mediaPlayer.songNames[originalIndex];
+        final songName = mediaPlayer.songs[originalIndex].title;
 
         return Dismissible(
           key: ValueKey(originalIndex),
