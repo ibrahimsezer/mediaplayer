@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
+import 'package:mediaplayer/viewmodel/music_player_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -37,16 +38,22 @@ class _PlaylistViewState extends State<PlaylistView> {
             _buildAppBar(),
             _buildSearchBar(),
             _buildPlaylistTabs(),
-            Expanded(
-              child: Consumer<MediaPlayerViewModel>(
-                builder: (context, mediaPlayer, _) {
-                  if (mediaPlayer.playlist.sequence.length == 0) {
-                    return _buildEmptyState();
-                  }
-                  return _buildPlaylist(mediaPlayer);
-                },
-              ),
-            ), /*
+            Consumer<MusicPlayerViewModel>(
+                builder: (context, viewModel, child) {
+              return Expanded(
+                child: ListView.builder(
+                  itemCount: viewModel.songs.length,
+                  itemBuilder: (context, index) {
+                    final song = viewModel.songs[index];
+                    return ListTile(
+                      title: Text(song.title),
+                      subtitle: Text(song.artist),
+                      onTap: () => viewModel.playSong(song),
+                    );
+                  },
+                ),
+              );
+            }), /*
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: SlidePageAction(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mediaplayer/const/const.dart';
-import 'package:mediaplayer/view/media_player_view.dart';
+import 'package:mediaplayer/service/audio_service.dart';
+import 'package:mediaplayer/view/music_player_view.dart';
+import 'package:mediaplayer/viewmodel/music_player_viewmodel.dart';
 import 'package:provider/provider.dart';
 import 'package:mediaplayer/theme/theme_provider.dart';
 import 'package:mediaplayer/viewmodel/media_player_viewmodel.dart';
@@ -21,6 +23,10 @@ Future<void> main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => MediaPlayerViewModel()),
+        Provider<AudioService>(create: (_) => AudioService()),
+        ChangeNotifierProvider<MusicPlayerViewModel>(
+            create: (context) => MusicPlayerViewModel(
+                Provider.of<AudioService>(context, listen: false))),
       ],
       child: const MyApp(),
     ),
@@ -37,7 +43,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: ConstTexts.jswMediaPlayer,
           theme: themeProvider.currentTheme,
-          home: const MediaPlayerView(),
+          home: MusicPlayerView(),
           debugShowCheckedModeBanner: false,
         );
       },
