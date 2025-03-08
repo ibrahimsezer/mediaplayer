@@ -43,6 +43,9 @@ class SongModel {
     return SongModel(
       filePath: filePath,
       title: title,
+      artist: 'Unknown Artist',
+      album: 'Unknown Album',
+      duration: const Duration(seconds: 0), // Default duration that will be updated when playing
     );
   }
 

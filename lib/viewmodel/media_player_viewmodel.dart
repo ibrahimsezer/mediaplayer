@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -5,20 +7,28 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:path/path.dart' as path;
 import 'package:mediaplayer/model/song_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MediaPlayerViewModel extends ChangeNotifier {
-  final List<SongModel> _songs = [];
+  // Constructor’da çağır
+  MediaPlayerViewModel() {
+    _playlist = ConcatenatingAudioSource(children: []);
+    _initializePlayer();
+    loadLocalSongs();
+    checkAndScanOnFirstLaunch(); // İlk açılışta tara
+  }
 
+  final List<SongModel> _songs = [];
   List<SongModel> get songs => _songs;
   List<String> get songNames => _songs.map((song) => song.title).toList();
   List<MediaItem> get metadata => _songs.map((song) => song.metadata).toList();
-  List<AudioSource> get audioSources => _songs.map((song) => song.audioSource).toList();
+  List<AudioSource> get audioSources =>
+      _songs.map((song) => song.audioSource).toList();
 
   int _currentIndex = 0;
   bool _isShuffleMode = false;
   bool _isRepeatMode = false;
   late final ConcatenatingAudioSource _playlist;
-  
   // Initialize the playlist
   ConcatenatingAudioSource get playlist => _playlist;
 
@@ -39,23 +49,88 @@ class MediaPlayerViewModel extends ChangeNotifier {
   final Map<String, List<SongModel>> _playlists = {};
   String? _currentPlaylist;
 
-  Map<String, List<String>> get playlists => 
-      _playlists.map((key, value) => MapEntry(key, value.map((song) => song.title).toList()));
+  Map<String, List<String>> get playlists => _playlists.map(
+      (key, value) => MapEntry(key, value.map((song) => song.title).toList()));
   String? get currentPlaylist => _currentPlaylist;
 
-  MediaPlayerViewModel() {
-    _playlist = ConcatenatingAudioSource(children: []);
-    _initializePlayer();
+  Future<void> checkAndScanOnFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isFirstLaunch = prefs.getBool('isFirstLaunch') ?? true;
+
+    if (isFirstLaunch) {
+      await scanDeviceForSongs();
+      await prefs.setBool('isFirstLaunch', false);
+    }
+  }
+
+  Future<bool> _checkAndRequestPermissions() async {
+    if (Platform.isAndroid) {
+      if (await Permission.storage.isGranted) return true;
+      if (await Permission.storage.isPermanentlyDenied) {
+        openAppSettings(); // Kullanıcıyı ayarlara yönlendir
+        return false;
+      }
+      return (await Permission.storage.request()).isGranted;
+    } else if (Platform.isIOS) {
+      if (await Permission.mediaLibrary.isGranted) return true;
+      if (await Permission.mediaLibrary.isPermanentlyDenied) {
+        openAppSettings();
+        return false;
+      }
+      return (await Permission.mediaLibrary.request()).isGranted;
+    }
+    return false;
+  }
+
+  Future<void> scanDeviceForSongs() async {
+    if (!await _checkAndRequestPermissions()) {
+      debugPrint("İzin verilmedi, tarama yapılamadı.");
+      return;
+    }
+    _songs.clear();
+    await _playlist.clear();
+    // Android için varsayılan dizinler
+    List<Directory> directoriesToScan = [];
+    if (Platform.isAndroid) {
+      directoriesToScan.add(Directory('/storage/emulated/0'));
+    } else if (Platform.isIOS) {
+      // iOS’ta medya kütüphanesine erişim için ek bir kütüphane gerekebilir
+      directoriesToScan.add(Directory('/Music')); // Örnek bir dizin
+    }
+    List<String> supportedExtensions = ['.mp3', '.wav', '.m4a', '.flac'];
+    for (var dir in directoriesToScan) {
+      if (!dir.existsSync()) continue;
+      try {
+        await for (var entity
+            in dir.list(recursive: true, followLinks: false)) {
+          if (entity is File) {
+            final filePath = entity.path;
+            final extension = path.extension(filePath).toLowerCase();
+            if (supportedExtensions.contains(extension)) {
+              final song = await SongModel.fromFilePath(filePath);
+              _songs.add(song);
+              await _playlist.add(song.audioSource);
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint("Dizin tarama hatası: $e");
+      }
+    }
+    if (_songs.isNotEmpty && _audioPlayer.audioSource == null) {
+      await _audioPlayer.setAudioSource(_playlist);
+    }
+    notifyListeners();
   }
 
   Future<void> _initializePlayer() async {
     try {
       if (_songs.isNotEmpty) {
+        await scanDeviceForSongs(); //
         await _playlist.addAll(audioSources);
         await _audioPlayer.setAudioSource(_playlist);
       }
       await _audioPlayer.setLoopMode(LoopMode.off);
-
       // Listen to current song changes
       _audioPlayer.currentIndexStream.listen((index) {
         if (index != null) {
@@ -63,12 +138,10 @@ class MediaPlayerViewModel extends ChangeNotifier {
           notifyListeners();
         }
       });
-
       // Listen to playlist changes
       _audioPlayer.sequenceStateStream.listen((_) {
         notifyListeners();
       });
-
       notifyListeners();
     } catch (e) {
       debugPrint("Error initializing player: $e");
@@ -85,29 +158,23 @@ class MediaPlayerViewModel extends ChangeNotifier {
           type: FileType.audio,
           allowMultiple: true,
         );
-
         if (result != null && result.paths.isNotEmpty) {
           List<SongModel> newSongs = [];
           List<AudioSource> newAudioSources = [];
-
           // Add new songs and their metadata
           for (String? filePath in result.paths) {
             if (filePath != null) {
               // Create a SongModel from the file path
               final songModel = SongModel.fromFilePath(filePath);
-              
               newSongs.add(songModel);
               _songs.add(songModel);
               newAudioSources.add(songModel.audioSource);
             }
           }
-
           await _playlist.addAll(newAudioSources);
-
           if (_audioPlayer.audioSource == null) {
             await _audioPlayer.setAudioSource(_playlist);
           }
-
           notifyListeners();
         }
       } else {
@@ -139,7 +206,6 @@ class MediaPlayerViewModel extends ChangeNotifier {
     if (_playlists.containsKey(name)) {
       throw Exception('A playlist with this name already exists');
     }
-
     _playlists[name] = [];
     notifyListeners();
   }
@@ -149,17 +215,13 @@ class MediaPlayerViewModel extends ChangeNotifier {
       if (!_playlists.containsKey(playlistName)) {
         throw Exception('Playlist not found');
       }
-
       // Create a SongModel from the file path
       final songModel = SongModel.fromFilePath(filePath);
-      
       _playlists[playlistName]!.add(songModel);
-
       // If this is the current playlist, update the main playlist
       if (_currentPlaylist == playlistName) {
         await _playlist.add(songModel.audioSource);
       }
-
       notifyListeners();
     } catch (e) {
       debugPrint("Error adding to playlist: $e");
@@ -172,21 +234,17 @@ class MediaPlayerViewModel extends ChangeNotifier {
       if (!_playlists.containsKey(playlistName)) {
         throw Exception('Playlist not found');
       }
-
       _songs.clear();
       await _playlist.clear();
-
       _songs.addAll(_playlists[playlistName]!);
-      List<AudioSource> audioSources = _songs.map((song) => song.audioSource).toList();
+      List<AudioSource> audioSources =
+          _songs.map((song) => song.audioSource).toList();
       await _playlist.addAll(audioSources);
-
       _currentPlaylist = playlistName;
       _currentIndex = 0;
-
       if (_songs.isNotEmpty) {
         await _audioPlayer.setAudioSource(_playlist);
       }
-
       notifyListeners();
     } catch (e) {
       debugPrint("Error switching playlist: $e");
@@ -199,16 +257,13 @@ class MediaPlayerViewModel extends ChangeNotifier {
       if (!_playlists.containsKey(playlistName)) {
         throw Exception('Playlist not found');
       }
-
       _playlists.remove(playlistName);
-
       if (_currentPlaylist == playlistName) {
         _currentPlaylist = null;
         _songs.clear();
         await _playlist.clear();
         _currentIndex = 0;
       }
-
       notifyListeners();
     } catch (e) {
       debugPrint("Error deleting playlist: $e");
@@ -221,13 +276,11 @@ class MediaPlayerViewModel extends ChangeNotifier {
       if (index >= 0 && index < _songs.length) {
         await _playlist.removeAt(index);
         _songs.removeAt(index);
-
         if (_songs.isEmpty) {
           _currentIndex = 0;
         } else if (_currentIndex >= _songs.length) {
           _currentIndex = _songs.length - 1;
         }
-
         notifyListeners();
       }
     } catch (e) {
@@ -241,16 +294,13 @@ class MediaPlayerViewModel extends ChangeNotifier {
       if (oldIndex < newIndex) {
         newIndex -= 1;
       }
-
       if (oldIndex >= 0 &&
           oldIndex < _songs.length &&
           newIndex >= 0 &&
           newIndex < _songs.length) {
         await _playlist.move(oldIndex, newIndex);
-
         final song = _songs.removeAt(oldIndex);
         _songs.insert(newIndex, song);
-
         notifyListeners();
       }
     } catch (e) {
@@ -262,9 +312,10 @@ class MediaPlayerViewModel extends ChangeNotifier {
   Future<void> sortByName() async {
     try {
       final indices = List.generate(_songs.length, (index) => index);
-      indices.sort((a, b) =>
-          _songs[a].title.toLowerCase().compareTo(_songs[b].title.toLowerCase()));
-
+      indices.sort((a, b) => _songs[a]
+          .title
+          .toLowerCase()
+          .compareTo(_songs[b].title.toLowerCase()));
       await _reorderPlaylistByIndices(indices);
       notifyListeners();
     } catch (e) {
@@ -279,7 +330,6 @@ class MediaPlayerViewModel extends ChangeNotifier {
       // we just need to reverse the current order for newest first
       final indices =
           List.generate(_songs.length, (index) => _songs.length - 1 - index);
-
       await _reorderPlaylistByIndices(indices);
       notifyListeners();
     } catch (e) {
@@ -290,19 +340,14 @@ class MediaPlayerViewModel extends ChangeNotifier {
 
   Future<void> _reorderPlaylistByIndices(List<int> indices) async {
     if (indices.isEmpty) return;
-
     final newSongs = <SongModel>[];
-
     for (final index in indices) {
       newSongs.add(_songs[index]);
     }
-
     _songs.clear();
     await _playlist.clear();
-
     _songs.addAll(newSongs);
     await _playlist.addAll(newSongs.map((song) => song.audioSource).toList());
-
     if (_currentIndex >= _songs.length) {
       _currentIndex = 0;
     }
@@ -316,16 +361,12 @@ class MediaPlayerViewModel extends ChangeNotifier {
       if (_playlists.containsKey(newName)) {
         throw Exception('A playlist with this name already exists');
       }
-
       final songs = _playlists[oldName]!;
-
       _playlists.remove(oldName);
       _playlists[newName] = songs;
-
       if (_currentPlaylist == oldName) {
         _currentPlaylist = newName;
       }
-
       notifyListeners();
     } catch (e) {
       debugPrint("Error renaming playlist: $e");

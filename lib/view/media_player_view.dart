@@ -143,16 +143,7 @@ class _MediaPlayerViewState extends State<MediaPlayerView>
                   MaterialPageRoute(builder: (context) => SettingsView()),
                 );
               },
-            ), /*
-            Consumer<MediaPlayerViewModel>(builder: (context, mediaPlayer, _) {
-              final bool hasNoSongs = mediaPlayer.songs.isEmpty;
-              return IconButton(
-                icon: Icon(_showQueue ? Icons.queue_music : Icons.playlist_add),
-                onPressed: hasNoSongs
-                    ? null
-                    : () => setState(() => _showQueue = !_showQueue),
-              );
-            }),*/
+            ),
           ],
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
