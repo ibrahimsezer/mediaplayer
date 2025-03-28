@@ -10,6 +10,8 @@ import 'package:mediaplayer/view/pages/search_page.dart';
 import 'package:mediaplayer/view/widgets/mini_player.dart';
 import 'package:provider/provider.dart';
 import 'package:mediaplayer/theme/theme_provider.dart';
+import 'package:mediaplayer/viewmodel/audio_player_viewmodel.dart';
+import 'package:mediaplayer/viewmodel/playlist_viewmodel.dart';
 
 class PlayerView extends StatefulWidget {
   const PlayerView({super.key});
@@ -20,13 +22,6 @@ class PlayerView extends StatefulWidget {
 
 class _PlayerViewState extends State<PlayerView> {
   int _currentIndex = 0;
-
-  // Mock currently playing song
-  SongModel? _currentSong;
-
-  // Mock playing state
-  bool _isPlaying = false;
-
   final List<Widget> _pages = [];
 
   @override
@@ -56,16 +51,15 @@ class _PlayerViewState extends State<PlayerView> {
   }
 
   void _onSongSelected(SongModel song) {
-    setState(() {
-      _currentSong = song;
-      _isPlaying = true;
-    });
-
-    // In a real app, this would start playback
+    final audioPlayerViewModel =
+        Provider.of<AudioPlayerViewModel>(context, listen: false);
+    audioPlayerViewModel.playSong(song);
   }
 
   void _onPlaylistSelected(PlaylistModel playlist) {
-    // In a real app, this would navigate to a playlist detail page
+    final audioPlayerViewModel =
+        Provider.of<AudioPlayerViewModel>(context, listen: false);
+    audioPlayerViewModel.loadPlaylist(playlist.songs);
   }
 
   void _onPageChanged(int index) {
@@ -74,62 +68,36 @@ class _PlayerViewState extends State<PlayerView> {
     });
   }
 
-  void _togglePlayPause() {
-    setState(() {
-      _isPlaying = !_isPlaying;
-    });
-
-    // In a real app, this would toggle playback
-  }
-
-  void _playNextSong() {
-    // In a real app, this would play the next song
-    if (_currentSong != null) {
-      final currentIndex =
-          SongModel.mockSongs.indexWhere((song) => song.id == _currentSong!.id);
-      if (currentIndex != -1 && currentIndex < SongModel.mockSongs.length - 1) {
-        setState(() {
-          _currentSong = SongModel.mockSongs[currentIndex + 1];
-        });
-      }
-    }
-  }
-
-  void _playPreviousSong() {
-    // In a real app, this would play the previous song
-    if (_currentSong != null) {
-      final currentIndex =
-          SongModel.mockSongs.indexWhere((song) => song.id == _currentSong!.id);
-      if (currentIndex > 0) {
-        setState(() {
-          _currentSong = SongModel.mockSongs[currentIndex - 1];
-        });
-      }
-    }
-  }
-
   void _onMiniPlayerTap() {
-    if (_currentSong != null) {
+    final audioPlayerViewModel =
+        Provider.of<AudioPlayerViewModel>(context, listen: false);
+    if (audioPlayerViewModel.currentSong != null) {
       _openNowPlayingScreen();
     }
   }
 
   void _openNowPlayingScreen() {
+    final audioPlayerViewModel =
+        Provider.of<AudioPlayerViewModel>(context, listen: false);
+    if (audioPlayerViewModel.currentSong == null) return;
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => NowPlayingPage(
-          song: _currentSong!,
-          isPlaying: _isPlaying,
+          song: audioPlayerViewModel.currentSong!,
+          isPlaying: audioPlayerViewModel.isPlaying,
           onPlayPausePressed: (isPlaying) {
-            setState(() {
-              _isPlaying = isPlaying;
-            });
+            if (isPlaying) {
+              audioPlayerViewModel.playOrPause();
+            } else {
+              audioPlayerViewModel.playOrPause();
+            }
           },
-          onNextPressed: _playNextSong,
-          onPreviousPressed: _playPreviousSong,
-          onShuffleToggled: () {},
-          onRepeatToggled: () {},
+          onNextPressed: audioPlayerViewModel.skipToNext,
+          onPreviousPressed: audioPlayerViewModel.skipToPrevious,
+          onShuffleToggled: audioPlayerViewModel.toggleShuffle,
+          onRepeatToggled: audioPlayerViewModel.changeLoopMode,
         ),
       ),
     );
@@ -138,6 +106,7 @@ class _PlayerViewState extends State<PlayerView> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final audioPlayerViewModel = Provider.of<AudioPlayerViewModel>(context);
 
     return Scaffold(
       body: IndexedStack(
@@ -148,13 +117,13 @@ class _PlayerViewState extends State<PlayerView> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Mini Player (if song is selected)
-          if (_currentSong != null)
+          if (audioPlayerViewModel.currentSong != null)
             MiniPlayer(
-              song: _currentSong!,
-              isPlaying: _isPlaying,
+              song: audioPlayerViewModel.currentSong!,
+              isPlaying: audioPlayerViewModel.isPlaying,
               onTap: _onMiniPlayerTap,
-              onPlayPause: _togglePlayPause,
-              onNext: _playNextSong,
+              onPlayPause: audioPlayerViewModel.playOrPause,
+              onNext: audioPlayerViewModel.skipToNext,
             ),
 
           // Navigation Bar
