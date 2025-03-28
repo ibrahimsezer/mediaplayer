@@ -1,0 +1,120 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- Project Goal:
+I need your help to design the User Interface (UI) for a modern, visually appealing, and user-friendly music player application using Flutter. The focus for this phase is solely on the visual design, layout, components, theme, and animations. We will not be implementing any backend logic, audio playback, file scanning, or state management integration at this stage.
+
+- Target Platforms (for UI considerations):
+
+- Android
+
+- iOS
+
+- Core Design Principles & Aesthetics:
+
+Modern & Clean: Aim for a contemporary look with ample whitespace, clear typography, and intuitive navigation. Avoid clutter.
+
+Visually Engaging: Make effective use of Album Art. Consider subtle gradients, shadows, or blurs where appropriate, but prioritize clarity.
+
+Consistency: Maintain a consistent design language (colors, fonts, spacing, icon style) across all screens.
+
+Intuitive Navigation: Users should easily understand how to browse their library, control playback, and manage playlists (visually).
+
+Responsiveness: Design layouts that adapt gracefully to different screen sizes (phones, potentially tablets) and orientations (portrait primarily, consider landscape).
+
+Smooth Transitions & Micro-interactions: Plan for subtle animations for screen transitions, button presses, and state changes (e.g., play/pause icon morphing) to enhance the user experience.
+
+Accessibility: Keep accessibility in mind (e.g., sufficient contrast ratios, legible font sizes, adequate touch target sizes).
+
+Key UI Screens & Components to Design:
+
+Main Navigation:
+
+Suggest a primary navigation pattern (e.g., Bottom Navigation Bar, Tabs within an AppBar).
+
+Design the look for navigating between main sections: Library (Songs, Albums, Artists, Playlists), Search, Settings (optional for now).
+
+Library Views:
+
+Songs List: Design the layout for a scrollable list of songs. Include placeholders for Title, Artist, Duration, and potentially a small Album Art thumbnail or context menu icon.
+
+Albums Grid/List: Design the layout for browsing albums. Emphasize Album Art. Show Album Title and Artist. Consider both grid and list view options.
+
+Artists List: Design the layout for a list of artists. Show Artist Name and perhaps the number of songs/albums or a representative image collage.
+
+Playlists List: Design the layout for displaying user-created playlists. Show Playlist Name, number of songs, and perhaps representative artwork.
+
+"Now Playing" Screen (Full Screen):
+
+This is a key screen. Design a visually dominant layout.
+
+Prominent display of large Album Art.
+
+Clear display of Song Title, Artist, and Album Name.
+
+Playback Controls: Design distinct icons/buttons for Play/Pause (consider animating the change), Next Track, Previous Track.
+
+Additional Controls: Design icons/buttons for Shuffle (on/off states) and Repeat (off/one/all states).
+
+Seek Bar: Design a progress slider showing elapsed time and total duration. Make it visually clear and easy to interact with.
+
+Other potential elements: Add to Playlist button, Lyrics button (placeholder), Volume slider (optional), Queue access button.
+
+Mini Player:
+
+Design a persistent component, usually docked at the bottom of the screen (above the main navigation bar).
+
+Should be visible when music is playing/paused while browsing other parts of the app.
+
+Show small Album Art, Song Title, Artist.
+
+Include essential controls: Play/Pause, maybe Next.
+
+Tapping the Mini Player should typically expand to the full "Now Playing" screen (design the transition).
+
+Search Interface:
+
+Design the search input bar.
+
+Design the appearance of search results (as the user types) – potentially showing sections for matching Songs, Albums, Artists.
+
+Playlist Details Screen:
+
+Design the view when a user opens a specific playlist.
+
+Show playlist header (Name, description, duration, artwork).
+
+Display the list of songs within the playlist (similar to the main songs list but perhaps with reordering handles).
+
+Include controls like Play All, Shuffle All.
+
+Common Elements:
+
+Typography: Suggest specific font families (using google_fonts perhaps?) and hierarchy (sizes/weights for titles, subtitles, body text).
+
+Color Palette: Propose a primary and accent color palette. Design for both Light Theme and Dark Theme. Show key screen examples in both themes.
+
+Iconography: Recommend an icon set (e.g., Material Icons, Cupertino Icons, or a custom set) and ensure consistent styling.
+
+Buttons & Controls: Define the visual style for buttons, sliders, toggles.
+
+Lists & Grids: Define spacing, dividers, and item layouts.
+
+Collaboration Style:
+
+Please provide Flutter widget code examples for layouts and components.
+
+Explain the choices behind specific design patterns or widget usage (e.g., why use Card vs. Container, ListView vs. GridView).
+
+Show visual mockups or detailed descriptions of the layout and appearance.
+
+Suggest specific Flutter packages that might help achieve certain UI effects (e.g., animations, flutter_staggered_grid_view).
+
+Iteratively refine the design based on feedback.
+
+Let's start by designing the Main Navigation (BottomNavigationBar perhaps?) and the overall structure/theme (Colors, Typography). Then we can move onto the Library Views (Songs list first).
