@@ -1,0 +1,154 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Your rule content
+
+Implementing Backend Logic & Architecture for Flutter Music Player
+
+Project Context:
+We have previously focused on designing the User Interface (UI) for a modern Flutter music player. Now, we need to implement the underlying backend logic, data management, and audio processing functionalities to bring that UI to life. This prompt focuses exclusively on the non-UI aspects: architecture, state management, audio handling, data persistence, and background execution.
+
+Goal:
+Architect and implement the core backend services and logic for the Flutter music player. This includes scanning for local audio files, managing the music library data, handling audio playback (including background execution and notifications), managing playback state, and persisting user data like playlists. We need to ensure this backend is robust, efficient, and well-structured to integrate cleanly with the pre-designed UI.
+
+Core Backend Requirements:
+
+System Architecture:
+
+Define a clean, scalable, and maintainable architecture. Recommend a specific pattern (e.g., Clean Architecture principles with distinct layers: Data, Domain, Presentation/Application; or a well-structured MVVM/Repository pattern). Explain the chosen structure and how components will interact.
+
+Define clear boundaries between UI, state management, business logic (domain), and data sources (repositories).
+
+State Management Setup:
+
+Implement the chosen state management solution (Riverpod preferred, as discussed previously).
+
+Set up providers for managing:
+
+Audio Playback State (current track, playing/paused, position, duration, shuffle/repeat modes).
+
+Music Library Data (lists of songs, albums, artists, playlists).
+
+Application State (loading status during scanning, permissions status, theme settings).
+
+Explain how UI widgets will consume this state reactively.
+
+Local Audio Discovery & Metadata:
+
+Implement the logic for requesting storage permissions using permission_handler.
+
+Develop an efficient background process/isolate (if necessary) for scanning device storage for audio files (.mp3, .m4a, etc.) using path_provider and file system APIs.
+
+Integrate a reliable method/package for extracting metadata (Title, Artist, Album, Duration, Album Art path/data) from audio files. Address potential errors and edge cases (missing tags, corrupted files). Consider performance for large libraries.
+
+Data Persistence:
+
+Choose and implement a local database solution (sqflite or hive). Justify the choice based on query needs, performance, and ease of use for this project.
+
+Design the database schema/models for storing:
+
+Scanned Song metadata (path, title, artist, album, duration, etc.).
+
+Album and Artist information (derived from songs).
+
+User-created Playlists and their song relationships.
+
+Implement Repository patterns to abstract database interactions from the rest of the application. Handle database initialization and migrations if needed.
+
+Audio Playback Engine:
+
+Integrate and configure the primary audio playback package (just_audio).
+
+Implement the service/logic layer to control playback: load track, play, pause, seek, stop, set volume (if needed).
+
+Manage the playback queue: load a list of tracks, handle next/previous track logic, integrate shuffle and repeat modes.
+
+Extract and manage playback events from just_audio (e.g., position updates, buffering status, completion events) and feed them into the state management system.
+
+Background Audio & Notifications:
+
+Integrate and configure the background audio package (audio_service).
+
+Implement the BackgroundAudioTask (or equivalent handler) to bridge just_audio with the background service.
+
+Ensure audio continues playing when the app is backgrounded or the screen is locked.
+
+Implement platform media notifications displaying current track info and standard controls (Play/Pause, Next, Previous, Seek).
+
+Handle lock screen controls and integration with other media sessions (e.g., Bluetooth headset controls).
+
+Implement Audio Focus Handling: Properly pause/duck/resume playback during interruptions (calls, navigation, other apps) using audio_service capabilities.
+
+Playlist Management Logic:
+
+Implement the backend logic for creating, reading, updating, and deleting playlists in the chosen database via the repository layer.
+
+Implement logic for adding songs to/removing songs from playlists and managing the order of songs within a playlist.
+
+Search Logic:
+
+Implement the backend functionality for searching/filtering the music library (songs, albums, artists) based on user input. This logic should likely query the persisted database for efficiency.
+
+Error Handling & Logging:
+
+Implement robust error handling mechanisms for file system access, metadata extraction, database operations, and audio playback errors.
+
+Consider adding logging for debugging purposes.
+
+Technical Stack (Confirmation & Implementation Focus):
+
+Architecture: Clean Architecture layers / MVVM with Repositories.
+
+State Management: Riverpod.
+
+Audio Playback: just_audio.
+
+Background/Notifications: audio_service.
+
+Permissions: permission_handler.
+
+File System: Dart dart:io, path_provider.
+
+Metadata: Package integrated with just_audio or a dedicated one like flutter_media_metadata.
+
+Database: sqflite or hive.
+
+Development Strategy (Backend Focus):
+
+Architecture & Setup: Define folders, core interfaces, abstract classes. Set up Riverpod providers structure.
+
+Permissions & Scanning: Implement permission request flow. Implement file scanning logic (consider Isolates for performance) and metadata extraction.
+
+Database & Repositories: Set up the chosen DB, define models, implement repositories for songs/albums/artists. Store scanned data.
+
+Core Playback (just_audio): Create a service/handler to manage just_audio, implement basic play/pause/seek from a specific file path/URI. Connect basic playback state to Riverpod.
+
+Background Service (audio_service): Integrate audio_service, create the background handler, connect just_audio control, implement basic background playback and notification.
+
+Queue Management: Enhance the audio service/handler to manage a queue, implement next/previous, shuffle/repeat logic.
+
+Audio Focus & Advanced Notifications: Implement robust audio focus handling. Enhance notifications (add artwork, seek bar if possible).
+
+Playlist Persistence: Implement playlist repositories and logic for CRUD operations on playlists and their contents.
+
+Connecting to UI State: Ensure all relevant backend states (playback status, library data, loading indicators) are correctly exposed via Riverpod providers for the UI to consume.
+
+Search Implementation: Implement the search query logic against the database.
+
+Refinement & Testing: Add error handling, optimize scanning/querying, write tests (unit tests for logic, potentially integration tests).
+
+Collaboration Style:
+
+Provide clear code examples for implementing services, repositories, state providers, and background tasks.
+
+Explain architectural decisions and trade-offs.
+
+Detail how to effectively use the recommended packages (just_audio, audio_service, Riverpod, database package) together.
+
+Focus on best practices for background processing, state management, and data handling in Flutter.
+
+Help structure the code according to the chosen architecture.
+
+Let's begin by defining the project architecture (folder structure, layers) and setting up the core Riverpod providers and the chosen database (sqflite or hive). Please provide initial setup code and explanations.
