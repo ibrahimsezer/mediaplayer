@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:mediaplayer/model/song_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -63,7 +65,7 @@ class SongRepository {
           .whereType<SongModel>() // Filter out nulls
           .toList();
     } catch (e) {
-      print('Error loading songs: $e');
+      log('Error loading songs: $e');
       // Keep using the current in-memory songs
     }
   }
@@ -76,7 +78,7 @@ class SongRepository {
           _songs.map((song) => _encodeSong(song)).toList();
       await prefs.setStringList('songs', songsJson);
     } catch (e) {
-      print('Error saving songs: $e');
+      log('Error saving songs: $e');
     }
   }
 
@@ -107,7 +109,7 @@ class SongRepository {
         filePath: map['filePath'],
       );
     } catch (e) {
-      print('Error decoding song: $e');
+      log('Error decoding song: $e');
       return null;
     }
   }

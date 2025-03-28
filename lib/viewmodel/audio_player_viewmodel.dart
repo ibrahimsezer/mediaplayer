@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mediaplayer/model/song_model.dart';
@@ -81,56 +83,112 @@ class AudioPlayerViewModel extends ChangeNotifier {
   // Load a playlist of songs
   Future<void> loadPlaylist(List<SongModel> songs,
       {int initialIndex = 0}) async {
-    if (songs.isEmpty) return;
+    if (songs.isEmpty) {
+      log('Attempted to load empty playlist');
+      return;
+    }
 
-    _playlist = songs;
-    await _audioService.setPlaylist(songs, initialIndex: initialIndex);
-    _currentSong = songs[initialIndex];
-    notifyListeners();
+    try {
+      // Store the complete playlist for proper playback
+      _playlist = List.from(songs);
+
+      // Ensure initialIndex is valid
+      if (initialIndex < 0 || initialIndex >= songs.length) {
+        initialIndex = 0;
+      }
+
+      await _audioService.setPlaylist(songs, initialIndex: initialIndex);
+
+      // Make sure we update the current song even if audio service initialization fails
+      _currentSong = songs[initialIndex];
+
+      // Explicitly try to play after loading
+      await _audioService.play().catchError((e) {
+        log('Error starting playback after loading playlist: $e');
+      });
+
+      notifyListeners();
+    } catch (e) {
+      log('Error loading playlist: $e');
+      // Don't rethrow to prevent app freezes
+    }
+  }
+
+  // Set the current song without reloading the playlist
+  // This is useful when we want to update the UI without disrupting playback
+  void setCurrentSongWithoutReload(SongModel song) {
+    if (_playlist.any((s) => s.id == song.id)) {
+      _currentSong = song;
+      _addToRecentlyPlayed(song);
+      notifyListeners();
+    }
   }
 
   // Play a specific song
   Future<void> playSong(SongModel song) async {
-    // Check if the song is already in the playlist
-    final index = _playlist.indexWhere((s) => s.id == song.id);
+    try {
+      // Check if the song is already in the playlist
+      final index = _playlist.indexWhere((s) => s.id == song.id);
 
-    if (index >= 0) {
-      // Song is in the playlist, just seek to it
-      await _audioService.seekToIndex(index);
-    } else {
-      // Song is not in the playlist, load it as a single song
-      await loadPlaylist([song]);
+      if (index >= 0) {
+        // Song is in the playlist, just seek to it
+        await _audioService.seekToIndex(index);
+        _currentSong = song;
+      } else {
+        // Song is not in the playlist, load it as a single song
+        _playlist = [song];
+        await _audioService.setPlaylist([song]);
+        _currentSong = song;
+      }
+
+      // Add to recently played songs, avoiding duplicates
+      _addToRecentlyPlayed(song);
+
+      // Explicitly try to play
+      await _audioService.play();
+      notifyListeners();
+    } catch (e) {
+      log('Error playing song: $e');
+      // Don't rethrow to prevent app freezes
     }
-
-    _currentSong = song;
-
-    // Add to recently played songs, avoiding duplicates
-    _addToRecentlyPlayed(song);
-
-    await _audioService.play();
-    notifyListeners();
   }
 
   // Play/pause toggle
   Future<void> playOrPause() async {
-    await _audioService.playOrPause();
+    try {
+      await _audioService.playOrPause();
+    } catch (e) {
+      log('Error in play/pause: $e');
+    }
   }
 
   // Seek to position
   Future<void> seek(Duration position) async {
-    await _audioService.seek(position);
+    try {
+      await _audioService.seek(position);
+    } catch (e) {
+      log('Error seeking: $e');
+    }
   }
 
   // Skip to next song
   Future<void> skipToNext() async {
-    await _audioService.next();
-    _updateCurrentSong();
+    try {
+      await _audioService.next();
+      _updateCurrentSong();
+    } catch (e) {
+      log('Error skipping to next: $e');
+    }
   }
 
   // Skip to previous song
   Future<void> skipToPrevious() async {
-    await _audioService.previous();
-    _updateCurrentSong();
+    try {
+      await _audioService.previous();
+      _updateCurrentSong();
+    } catch (e) {
+      log('Error skipping to previous: $e');
+    }
   }
 
   // Toggle shuffle mode
@@ -181,6 +239,34 @@ class AudioPlayerViewModel extends ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  // Play a song that's already in the current playlist
+  Future<void> playSongInCurrentPlaylist(SongModel song) async {
+    try {
+      final index = _playlist.indexWhere((s) => s.id == song.id);
+      if (index >= 0) {
+        // Song is in the playlist, just seek to it
+        await _audioService.seekToIndex(index);
+        _currentSong = song;
+
+        // Add to recently played
+        _addToRecentlyPlayed(song);
+
+        // Ensure playback starts
+        if (!_isPlaying) {
+          await _audioService.play();
+        }
+
+        notifyListeners();
+      } else {
+        // Fallback to regular play if somehow the song isn't in the playlist
+        await playSong(song);
+      }
+    } catch (e) {
+      log('Error playing song in current playlist: $e');
+      // Don't rethrow to prevent app freezes
+    }
   }
 
   @override

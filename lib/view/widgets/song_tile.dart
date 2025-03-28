@@ -6,12 +6,14 @@ class SongTile extends StatelessWidget {
   final SongModel song;
   final bool isPlaying;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   const SongTile({
     Key? key,
     required this.song,
     this.isPlaying = false,
     required this.onTap,
+    this.trailing,
   }) : super(key: key);
 
   @override
@@ -41,27 +43,28 @@ class SongTile extends StatelessWidget {
       subtitle: Text(
         song.artist,
         style: theme.textTheme.bodyMedium?.copyWith(
-          color: isPlaying
-              ? theme.colorScheme.primary.withValues(alpha: 0.7)
-              : null,
+          color: isPlaying ? theme.colorScheme.primary.withOpacity(0.7) : null,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            FormatHelper.formatDuration(song.duration),
-            style: theme.textTheme.bodySmall,
+      trailing: trailing ??
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                FormatHelper.formatDuration(song.duration),
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                isPlaying
+                    ? Icons.pause_circle_outline
+                    : Icons.play_circle_outline,
+                color: isPlaying ? theme.colorScheme.primary : null,
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Icon(
-            isPlaying ? Icons.pause_circle_outline : Icons.play_circle_outline,
-            color: isPlaying ? theme.colorScheme.primary : null,
-          ),
-        ],
-      ),
     );
   }
 }

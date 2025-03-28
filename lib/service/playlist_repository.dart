@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:mediaplayer/model/playlist_model.dart';
 import 'package:mediaplayer/model/song_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -159,7 +161,7 @@ class PlaylistRepository {
           .whereType<PlaylistModel>() // Filter out nulls
           .toList();
     } catch (e) {
-      print('Error loading playlists: $e');
+      log('Error loading playlists: $e');
     }
   }
 
@@ -171,7 +173,7 @@ class PlaylistRepository {
           _playlists.map((playlist) => _encodePlaylist(playlist)).toList();
       await prefs.setStringList('playlists', playlistsJson);
     } catch (e) {
-      print('Error saving playlists: $e');
+      log('Error saving playlists: $e');
     }
   }
 
@@ -228,7 +230,7 @@ class PlaylistRepository {
         songs: songs,
       );
     } catch (e) {
-      print('Error decoding playlist: $e');
+      log('Error decoding playlist: $e');
       return null;
     }
   }

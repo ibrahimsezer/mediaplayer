@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:mediaplayer/const/app_constants.dart';
 import 'package:mediaplayer/model/playlist_model.dart';
@@ -53,13 +55,61 @@ class _PlayerViewState extends State<PlayerView> {
   void _onSongSelected(SongModel song) {
     final audioPlayerViewModel =
         Provider.of<AudioPlayerViewModel>(context, listen: false);
-    audioPlayerViewModel.playSong(song);
+
+    try {
+      // Check if the song is already in the current playlist
+      final currentPlaylist = audioPlayerViewModel.playlist;
+      final index = currentPlaylist.indexWhere((s) => s.id == song.id);
+
+      if (index >= 0) {
+        // The song is in the current playlist, seek to it
+        audioPlayerViewModel.playSongInCurrentPlaylist(song);
+      } else {
+        // Song is not in the current playlist, load it as a single song
+        audioPlayerViewModel.playSong(song);
+      }
+    } catch (e) {
+      log('Error in _onSongSelected: $e');
+      // Don't rethrow, to prevent app freezes
+    }
   }
 
   void _onPlaylistSelected(PlaylistModel playlist) {
     final audioPlayerViewModel =
         Provider.of<AudioPlayerViewModel>(context, listen: false);
-    audioPlayerViewModel.loadPlaylist(playlist.songs);
+    try {
+      if (playlist.songs.isNotEmpty) {
+        // Load the playlist directly without making a copy
+        audioPlayerViewModel.loadPlaylist(playlist.songs).then((_) {
+          // Select the first song to make the mini-player appear
+          if (playlist.songs.isNotEmpty) {
+            // This sets the current song without reloading the playlist
+            audioPlayerViewModel
+                .setCurrentSongWithoutReload(playlist.songs.first);
+          }
+        }).catchError((e) {
+          log('Error starting playback after playlist selection: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to play playlist: ${e.toString()}'),
+            ),
+          );
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This playlist is empty'),
+          ),
+        );
+      }
+    } catch (e) {
+      log('Error in _onPlaylistSelected: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to play playlist: ${e.toString()}'),
+        ),
+      );
+    }
   }
 
   void _onPageChanged(int index) {

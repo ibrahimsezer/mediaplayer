@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/foundation.dart';
 import 'package:mediaplayer/model/song_model.dart';
 import 'package:mediaplayer/service/file_scanner_service.dart';
@@ -53,10 +55,10 @@ class LibraryViewModel extends ChangeNotifier {
   Future<bool> requestPermissionsAndScan() async {
     final hasPermission = await _scannerService.requestPermissions();
     if (hasPermission) {
-      print('Permissions granted for file scanning');
+      log('Permissions granted for file scanning');
       return true;
     } else {
-      print('Permission denied for file scanning');
+      log('Permission denied for file scanning');
       _setError(
           'Permission denied. Please grant storage permission to scan for music.');
       return false;
@@ -69,7 +71,7 @@ class LibraryViewModel extends ChangeNotifier {
     _clearError();
 
     try {
-      print('Starting directory scan: $directoryPath');
+      log('Starting directory scan: $directoryPath');
 
       // Check if directory exists
       final directory = Directory(directoryPath);
@@ -80,19 +82,18 @@ class LibraryViewModel extends ChangeNotifier {
       }
 
       final songs = await _scannerService.scanDirectory(directoryPath);
-      print('Scan complete. Found ${songs.length} songs.');
+      log('Scan complete. Found ${songs.length} songs.');
 
       if (songs.isEmpty) {
         _setError('No music files found in this directory: $directoryPath');
       } else {
-        print('Adding ${songs.length} songs to repository');
+        log('Adding ${songs.length} songs to repository');
         _songRepository.addSongs(songs);
         _refreshLibraryData();
-        print(
-            'Library data refreshed. Now has ${_allSongs.length} songs total.');
+        log('Library data refreshed. Now has ${_allSongs.length} songs total.');
       }
     } catch (e) {
-      print('Error scanning directory: $e');
+      log('Error scanning directory: $e');
       _setError('Error scanning directory: $e');
     } finally {
       _setLoading(false);
@@ -103,17 +104,17 @@ class LibraryViewModel extends ChangeNotifier {
   Future<void> pickAndScanDirectory() async {
     final hasPermission = await requestPermissionsAndScan();
     if (!hasPermission) {
-      print('No permission to scan directory');
+      log('No permission to scan directory');
       return;
     }
 
     final directoryPath = await _scannerService.pickDirectory();
 
     if (directoryPath != null && directoryPath.isNotEmpty) {
-      print('Directory selected for scanning: $directoryPath');
+      log('Directory selected for scanning: $directoryPath');
       await scanDirectory(directoryPath);
     } else {
-      print('No directory selected or directory path is empty');
+      log('No directory selected or directory path is empty');
       _setError('No directory selected');
     }
   }
@@ -122,7 +123,7 @@ class LibraryViewModel extends ChangeNotifier {
   Future<void> pickAndAddMusicFiles() async {
     final hasPermission = await requestPermissionsAndScan();
     if (!hasPermission) {
-      print('No permission to pick music files');
+      log('No permission to pick music files');
       return;
     }
 
@@ -130,34 +131,34 @@ class LibraryViewModel extends ChangeNotifier {
     _clearError();
 
     try {
-      print('Starting file picking process');
+      log('Starting file picking process');
       final filePaths = await _scannerService.pickAudioFiles();
 
       if (filePaths.isEmpty) {
-        print('No files selected or file picking canceled');
+        log('No files selected or file picking canceled');
         _setError('No files selected');
         _setLoading(false);
         return;
       }
 
-      print('Processing ${filePaths.length} selected files');
+      log('Processing ${filePaths.length} selected files');
       final songs = <SongModel>[];
       final failedFiles = <String>[];
 
       for (final path in filePaths) {
         try {
-          print('Extracting metadata for: $path');
+          log('Extracting metadata for: $path');
           final song = await _scannerService.extractMetadata(path);
           if (song != null) {
             songs.add(song);
-            print('Successfully processed: $path');
+            log('Successfully processed: $path');
           } else {
             failedFiles.add(path);
-            print('Failed to extract metadata for: $path');
+            log('Failed to extract metadata for: $path');
           }
         } catch (e) {
           failedFiles.add(path);
-          print('Error processing file $path: $e');
+          log('Error processing file $path: $e');
         }
       }
 
@@ -165,12 +166,12 @@ class LibraryViewModel extends ChangeNotifier {
         if (failedFiles.isNotEmpty) {
           _setError(
               'Failed to process all selected files. Check file formats or permissions.');
-          print('Failed files: ${failedFiles.join(', ')}');
+          log('Failed files: ${failedFiles.join(', ')}');
         } else {
           _setError('No valid music files were selected.');
         }
       } else {
-        print('Adding ${songs.length} processed songs to repository');
+        log('Adding ${songs.length} processed songs to repository');
         _songRepository.addSongs(songs);
         _refreshLibraryData();
 
@@ -180,7 +181,7 @@ class LibraryViewModel extends ChangeNotifier {
         }
       }
     } catch (e) {
-      print('Error adding music files: $e');
+      log('Error adding music files: $e');
       _setError('Error adding music files: $e');
     } finally {
       _setLoading(false);
@@ -209,8 +210,7 @@ class LibraryViewModel extends ChangeNotifier {
     _allAlbums = _songRepository.getAllAlbums();
     _allArtists = _songRepository.getAllArtists();
 
-    print(
-        'Library refreshed: ${_allSongs.length} songs, ${_allAlbums.length} albums, ${_allArtists.length} artists');
+    log('Library refreshed: ${_allSongs.length} songs, ${_allAlbums.length} albums, ${_allArtists.length} artists');
     notifyListeners();
   }
 
@@ -238,7 +238,7 @@ class LibraryViewModel extends ChangeNotifier {
   // Set error
   void _setError(String error) {
     _error = error;
-    print('LibraryViewModel error: $error');
+    log('LibraryViewModel error: $error');
     notifyListeners();
   }
 

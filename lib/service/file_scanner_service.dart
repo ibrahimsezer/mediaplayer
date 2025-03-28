@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -25,8 +26,7 @@ class FileScannerService {
       final externalStorageStatus =
           await Permission.manageExternalStorage.request();
 
-      print(
-          'Permission statuses - Audio: $audioStatus, Storage: $storageStatus, External: $externalStorageStatus');
+      log('Permission statuses - Audio: $audioStatus, Storage: $storageStatus, External: $externalStorageStatus');
 
       // Check if any permission is granted
       return audioStatus.isGranted ||
@@ -43,16 +43,16 @@ class FileScannerService {
     final List<SongModel> songs = [];
 
     if (!await directory.exists()) {
-      print('Directory does not exist: $directoryPath');
+      log('Directory does not exist: $directoryPath');
       return songs;
     }
 
     try {
-      print('Scanning directory: $directoryPath');
+      log('Scanning directory: $directoryPath');
       final List<FileSystemEntity> entities =
           await directory.list(recursive: true).toList();
 
-      print('Found ${entities.length} files/directories in total');
+      log('Found ${entities.length} files/directories in total');
       int audioFilesCount = 0;
 
       for (final entity in entities) {
@@ -61,27 +61,26 @@ class FileScannerService {
 
           if (_supportedExtensions.any((ext) => path.endsWith(ext))) {
             audioFilesCount++;
-            print('Processing audio file: ${entity.path}');
+            log('Processing audio file: ${entity.path}');
 
             try {
               final song = await extractMetadata(entity.path);
               if (song != null) {
                 songs.add(song);
-                print('Successfully extracted metadata for: ${entity.path}');
+                log('Successfully extracted metadata for: ${entity.path}');
               } else {
-                print('Failed to extract metadata for: ${entity.path}');
+                log('Failed to extract metadata for: ${entity.path}');
               }
             } catch (e) {
-              print('Error processing audio file ${entity.path}: $e');
+              log('Error processing audio file ${entity.path}: $e');
             }
           }
         }
       }
 
-      print(
-          'Found $audioFilesCount audio files, successfully processed ${songs.length}');
+      log('Found $audioFilesCount audio files, successfully processed ${songs.length}');
     } catch (e) {
-      print('Error scanning directory: $e');
+      log('Error scanning directory: $e');
     }
 
     return songs;
@@ -92,13 +91,13 @@ class FileScannerService {
     try {
       final result = await FilePicker.platform.getDirectoryPath();
       if (result != null) {
-        print('Selected directory: $result');
+        log('Selected directory: $result');
       } else {
-        print('No directory selected');
+        log('No directory selected');
       }
       return result;
     } catch (e) {
-      print('Error picking directory: $e');
+      log('Error picking directory: $e');
       return null;
     }
   }
@@ -117,17 +116,17 @@ class FileScannerService {
             .map((path) => path!)
             .toList();
 
-        print('Selected ${paths.length} audio files');
+        log('Selected ${paths.length} audio files');
         for (var path in paths) {
-          print('Selected file: $path');
+          log('Selected file: $path');
         }
 
         return paths;
       } else {
-        print('No files selected');
+        log('No files selected');
       }
     } catch (e) {
-      print('Error picking audio files: $e');
+      log('Error picking audio files: $e');
     }
 
     return [];
@@ -138,37 +137,37 @@ class FileScannerService {
     final audioPlayer = AudioPlayer();
 
     try {
-      print('Attempting to extract metadata from: $filePath');
+      log('Attempting to extract metadata from: $filePath');
 
       // Check if file exists
       final file = File(filePath);
       if (!await file.exists()) {
-        print('File does not exist: $filePath');
+        log('File does not exist: $filePath');
         return null;
       }
 
       // Check file size
       final fileSize = await file.length();
       if (fileSize == 0) {
-        print('File is empty: $filePath');
+        log('File is empty: $filePath');
         return null;
       }
 
-      print('File exists and size is $fileSize bytes');
+      log('File exists and size is $fileSize bytes');
 
       // Load the file to extract metadata
       final duration = await audioPlayer.setFilePath(filePath);
       if (duration == null) {
-        print('Failed to get duration for: $filePath');
+        log('Failed to get duration for: $filePath');
       } else {
-        print('Duration: ${duration.inSeconds} seconds');
+        log('Duration: ${duration.inSeconds} seconds');
       }
 
       // Extract the filename and use it as title if metadata is not available
       final fileName = path.basename(filePath);
       final title = _extractTitleFromPath(filePath);
 
-      print('Extracted title: $title');
+      log('Extracted title: $title');
 
       // Default values since we don't have full metadata
       final artist = audioPlayer.sequenceState?.currentSource?.tag?.artist ??
@@ -191,11 +190,11 @@ class FileScannerService {
         filePath: filePath,
       );
 
-      print('Created song model: $song');
+      log('Created song model: $song');
       return song;
     } catch (e) {
       await audioPlayer.dispose();
-      print('Error extracting metadata from $filePath: $e');
+      log('Error extracting metadata from $filePath: $e');
 
       // Creating a fallback song with basic info in case of error
       try {
@@ -210,7 +209,7 @@ class FileScannerService {
           filePath: filePath,
         );
       } catch (fallbackError) {
-        print('Error creating fallback song: $fallbackError');
+        log('Error creating fallback song: $fallbackError');
         return null;
       }
     }
