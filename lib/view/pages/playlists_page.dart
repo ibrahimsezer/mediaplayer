@@ -3,6 +3,7 @@ import 'package:mediaplayer/model/playlist_model.dart';
 import 'package:mediaplayer/view/widgets/playlist_card.dart';
 import 'package:provider/provider.dart';
 import 'package:mediaplayer/viewmodel/playlist_viewmodel.dart';
+import 'package:mediaplayer/view/pages/playlist_detail_page.dart';
 
 class PlaylistsPage extends StatelessWidget {
   final Function(PlaylistModel) onPlaylistSelected;
@@ -25,8 +26,8 @@ class PlaylistsPage extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => _showCreatePlaylistDialog(context),
-            tooltip: 'Create Playlist',
+            onPressed: () => _showAddMusicOptions(context, playlistViewModel),
+            tooltip: 'Add Music',
           ),
         ],
       ),
@@ -107,7 +108,8 @@ class PlaylistsPage extends StatelessWidget {
                             final playlist = playlistViewModel.playlists[index];
                             return PlaylistCard(
                               playlist: playlist,
-                              onTap: () => onPlaylistSelected(playlist),
+                              onTap: () =>
+                                  _openPlaylistDetail(context, playlist),
                               isHorizontal: false,
                             );
                           },
@@ -125,6 +127,20 @@ class PlaylistsPage extends StatelessWidget {
     );
   }
 
+  // Navigate to playlist detail screen
+  void _openPlaylistDetail(BuildContext context, PlaylistModel playlist) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PlaylistDetailPage(
+          playlist: playlist,
+          onSongSelected: (song) => onPlaylistSelected(playlist),
+        ),
+      ),
+    );
+  }
+
+  // Show dialog to create a new playlist
   Future<void> _showCreatePlaylistDialog(BuildContext context) async {
     final playlistViewModel =
         Provider.of<PlaylistViewModel>(context, listen: false);
@@ -173,6 +189,38 @@ class PlaylistsPage extends StatelessWidget {
                   Navigator.pop(context);
                 }
               }
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show options dialog for adding a playlist
+  void _showAddMusicOptions(BuildContext context, PlaylistViewModel viewModel) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create Playlist'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Choose a name for your playlist',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showCreatePlaylistDialog(context);
             },
             child: const Text('Create'),
           ),
