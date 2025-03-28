@@ -236,6 +236,7 @@ class _LibraryPageState extends State<LibraryPage>
 
   Widget _buildAlbumsTab() {
     final libraryViewModel = Provider.of<LibraryViewModel>(context);
+    final audioPlayerViewModel = Provider.of<AudioPlayerViewModel>(context);
 
     if (libraryViewModel.allAlbums.isEmpty) {
       return _buildEmptyState('No albums in your library yet', Icons.album);
@@ -260,10 +261,14 @@ class _LibraryPageState extends State<LibraryPage>
           artist: representative.artist,
           coverArt: representative.albumArt,
           onTap: () {
-            // Play album
-            final audioViewModel =
-                Provider.of<AudioPlayerViewModel>(context, listen: false);
-            audioViewModel.loadPlaylist(songs);
+            // Play album songs
+            audioPlayerViewModel.loadPlaylist(songs);
+            if (songs.isNotEmpty) {
+              widget.onSongSelected(songs.first);
+            }
+
+            // Show album details in bottom sheet
+            _showAlbumDetails(context, album, songs, audioPlayerViewModel);
           },
           size: MediaQuery.of(context).size.width / 2 - 24,
         );
@@ -273,6 +278,7 @@ class _LibraryPageState extends State<LibraryPage>
 
   Widget _buildArtistsTab() {
     final libraryViewModel = Provider.of<LibraryViewModel>(context);
+    final audioPlayerViewModel = Provider.of<AudioPlayerViewModel>(context);
 
     if (libraryViewModel.allArtists.isEmpty) {
       return _buildEmptyState('No artists in your library yet', Icons.person);
@@ -294,9 +300,13 @@ class _LibraryPageState extends State<LibraryPage>
           subtitle: Text('${songs.length} songs'),
           onTap: () {
             // Play all songs by this artist
-            final audioViewModel =
-                Provider.of<AudioPlayerViewModel>(context, listen: false);
-            audioViewModel.loadPlaylist(songs);
+            audioPlayerViewModel.loadPlaylist(songs);
+            if (songs.isNotEmpty) {
+              widget.onSongSelected(songs.first);
+            }
+
+            // Show artist details in bottom sheet
+            _showArtistDetails(context, artist, songs, audioPlayerViewModel);
           },
         );
       },
@@ -329,6 +339,339 @@ class _LibraryPageState extends State<LibraryPage>
             onPressed: () => _showAddMusicOptions(context, libraryViewModel),
           ),
         ],
+      ),
+    );
+  }
+
+  // Show album details bottom sheet
+  void _showAlbumDetails(BuildContext context, String album,
+      List<SongModel> songs, AudioPlayerViewModel audioPlayerViewModel) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            // Handle
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+
+            // Album header
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  // Album art
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        songs.first.albumArt,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 16),
+
+                  // Album info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          album,
+                          style: Theme.of(context).textTheme.titleLarge,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          songs.first.artist,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${songs.length} songs',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Play button
+                  IconButton(
+                    icon: const Icon(Icons.play_circle_filled),
+                    iconSize: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                    onPressed: () {
+                      audioPlayerViewModel.loadPlaylist(songs);
+                      if (songs.isNotEmpty) {
+                        widget.onSongSelected(songs.first);
+                      }
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Songs list
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: songs.length,
+                itemBuilder: (context, index) {
+                  final song = songs[index];
+                  return SongTile(
+                    song: song,
+                    isPlaying:
+                        audioPlayerViewModel.currentSong?.id == song.id &&
+                            audioPlayerViewModel.isPlaying,
+                    onTap: () {
+                      widget.onSongSelected(song);
+                      audioPlayerViewModel.playSong(song);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Show artist details bottom sheet
+  void _showArtistDetails(BuildContext context, String artist,
+      List<SongModel> songs, AudioPlayerViewModel audioPlayerViewModel) {
+    // Group songs by album
+    final albums = <String, List<SongModel>>{};
+    for (final song in songs) {
+      if (!albums.containsKey(song.album)) {
+        albums[song.album] = [];
+      }
+      albums[song.album]!.add(song);
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => DefaultTabController(
+          length: 2,
+          child: Column(
+            children: [
+              // Handle
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Container(
+                  width: 40,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+
+              // Artist header
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    // Artist image
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundImage: AssetImage(songs.first.albumArt),
+                    ),
+
+                    const SizedBox(width: 16),
+
+                    // Artist info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            artist,
+                            style: Theme.of(context).textTheme.titleLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${songs.length} songs · ${albums.length} albums',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Play button
+                    IconButton(
+                      icon: const Icon(Icons.play_circle_filled),
+                      iconSize: 48,
+                      color: Theme.of(context).colorScheme.primary,
+                      onPressed: () {
+                        audioPlayerViewModel.loadPlaylist(songs);
+                        if (songs.isNotEmpty) {
+                          widget.onSongSelected(songs.first);
+                        }
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Tab bar
+              TabBar(
+                tabs: const [
+                  Tab(text: 'Songs'),
+                  Tab(text: 'Albums'),
+                ],
+                labelColor: Theme.of(context).colorScheme.primary,
+                unselectedLabelColor:
+                    Theme.of(context).textTheme.bodyLarge?.color,
+                indicatorColor: Theme.of(context).colorScheme.primary,
+              ),
+
+              // Tab views
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    // Songs tab
+                    ListView.builder(
+                      controller: scrollController,
+                      itemCount: songs.length,
+                      itemBuilder: (context, index) {
+                        final song = songs[index];
+                        return SongTile(
+                          song: song,
+                          isPlaying:
+                              audioPlayerViewModel.currentSong?.id == song.id &&
+                                  audioPlayerViewModel.isPlaying,
+                          onTap: () {
+                            widget.onSongSelected(song);
+                            audioPlayerViewModel.playSong(song);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+
+                    // Albums tab
+                    GridView.builder(
+                      padding: const EdgeInsets.all(16.0),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.8,
+                      ),
+                      itemCount: albums.length,
+                      itemBuilder: (context, index) {
+                        final albumName = albums.keys.elementAt(index);
+                        final albumSongs = albums[albumName]!;
+
+                        return InkWell(
+                          onTap: () {
+                            Navigator.pop(context);
+                            _showAlbumDetails(context, albumName, albumSongs,
+                                audioPlayerViewModel);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Album art
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: AspectRatio(
+                                  aspectRatio: 1,
+                                  child: Image.asset(
+                                    albumSongs.first.albumArt,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+
+                              // Album title
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 8.0, left: 4.0, right: 4.0),
+                                child: Text(
+                                  albumName,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+
+                              // Album info
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                    left: 4.0, right: 4.0),
+                                child: Text(
+                                  '${albumSongs.length} songs',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
