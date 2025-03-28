@@ -14,6 +14,10 @@ class AudioPlayerViewModel extends ChangeNotifier {
   List<SongModel> _playlist = [];
   List<SongModel> get playlist => _playlist;
 
+  // Recently played songs
+  List<SongModel> _recentlyPlayedSongs = [];
+  List<SongModel> get recentlyPlayedSongs => _recentlyPlayedSongs;
+
   // Playback state
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
@@ -99,6 +103,10 @@ class AudioPlayerViewModel extends ChangeNotifier {
     }
 
     _currentSong = song;
+
+    // Add to recently played songs, avoiding duplicates
+    _addToRecentlyPlayed(song);
+
     await _audioService.play();
     notifyListeners();
   }
@@ -157,6 +165,22 @@ class AudioPlayerViewModel extends ChangeNotifier {
       _currentSong = _playlist[index];
       notifyListeners();
     }
+  }
+
+  // Add a song to recently played list
+  void _addToRecentlyPlayed(SongModel song) {
+    // Remove the song if it's already in the list to avoid duplicates
+    _recentlyPlayedSongs.removeWhere((s) => s.id == song.id);
+
+    // Add the song to the beginning of the list
+    _recentlyPlayedSongs.insert(0, song);
+
+    // Keep only the most recent 20 songs
+    if (_recentlyPlayedSongs.length > 20) {
+      _recentlyPlayedSongs = _recentlyPlayedSongs.sublist(0, 20);
+    }
+
+    notifyListeners();
   }
 
   @override

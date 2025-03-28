@@ -3,6 +3,9 @@ import 'package:mediaplayer/const/app_constants.dart';
 import 'package:mediaplayer/helper/format_helper.dart';
 import 'package:mediaplayer/model/song_model.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
+import 'package:provider/provider.dart';
+import 'package:mediaplayer/viewmodel/audio_player_viewmodel.dart';
+import 'package:just_audio/just_audio.dart';
 
 class NowPlayingPage extends StatefulWidget {
   final SongModel song;
@@ -12,8 +15,6 @@ class NowPlayingPage extends StatefulWidget {
   final VoidCallback onPreviousPressed;
   final VoidCallback onShuffleToggled;
   final VoidCallback onRepeatToggled;
-  final bool isShuffleEnabled;
-  final bool isRepeatEnabled;
 
   const NowPlayingPage({
     Key? key,
@@ -24,8 +25,6 @@ class NowPlayingPage extends StatefulWidget {
     required this.onPreviousPressed,
     required this.onShuffleToggled,
     required this.onRepeatToggled,
-    this.isShuffleEnabled = false,
-    this.isRepeatEnabled = false,
   }) : super(key: key);
 
   @override
@@ -35,10 +34,6 @@ class NowPlayingPage extends StatefulWidget {
 class _NowPlayingPageState extends State<NowPlayingPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-
-  // For demo purposes - this would normally come from an audio player
-  final Duration _duration = const Duration(minutes: 3, seconds: 30);
-  final Duration _position = const Duration(minutes: 1, seconds: 15);
 
   @override
   void initState() {
@@ -59,6 +54,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
+    final audioPlayerViewModel = Provider.of<AudioPlayerViewModel>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -89,7 +85,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
+                    color: Colors.black.withOpacity(0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -137,8 +133,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 Text(
                   widget.song.artist,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.textTheme.titleSmall?.color
-                        ?.withValues(alpha: 0.7),
+                    color: theme.textTheme.titleSmall?.color?.withOpacity(0.7),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -148,8 +143,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 Text(
                   widget.song.album,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color
-                        ?.withValues(alpha: 0.5),
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -165,20 +159,19 @@ class _NowPlayingPageState extends State<NowPlayingPage>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: ProgressBar(
-              progress: _position,
-              buffered: _position + const Duration(seconds: 30),
-              total: _duration,
+              progress: audioPlayerViewModel.position,
+              buffered: audioPlayerViewModel.bufferedPosition,
+              total: audioPlayerViewModel.duration,
               progressBarColor: theme.colorScheme.primary,
-              baseBarColor: theme.colorScheme.primary.withValues(alpha: 0.2),
-              bufferedBarColor:
-                  theme.colorScheme.primary.withValues(alpha: 0.5),
+              baseBarColor: theme.colorScheme.primary.withOpacity(0.2),
+              bufferedBarColor: theme.colorScheme.primary.withOpacity(0.5),
               thumbColor: theme.colorScheme.primary,
               barHeight: 4.0,
               thumbRadius: 7.0,
               timeLabelTextStyle: theme.textTheme.bodySmall,
               timeLabelPadding: 8.0,
               onSeek: (duration) {
-                // This would be hooked up to the audio player
+                audioPlayerViewModel.seek(duration);
               },
             ),
           ),
@@ -193,9 +186,9 @@ class _NowPlayingPageState extends State<NowPlayingPage>
               IconButton(
                 icon: Icon(
                   Icons.shuffle,
-                  color: widget.isShuffleEnabled
+                  color: audioPlayerViewModel.shuffleModeEnabled
                       ? theme.colorScheme.primary
-                      : theme.iconTheme.color?.withValues(alpha: 0.7),
+                      : theme.iconTheme.color?.withOpacity(0.7),
                 ),
                 onPressed: widget.onShuffleToggled,
                 iconSize: 28,
@@ -218,7 +211,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  color: theme.colorScheme.primary.withOpacity(0.1),
                 ),
                 child: IconButton(
                   icon: AnimatedSwitcher(
@@ -249,10 +242,10 @@ class _NowPlayingPageState extends State<NowPlayingPage>
               // Repeat button
               IconButton(
                 icon: Icon(
-                  Icons.repeat,
-                  color: widget.isRepeatEnabled
+                  _getRepeatIcon(audioPlayerViewModel.loopMode),
+                  color: audioPlayerViewModel.loopMode != LoopMode.off
                       ? theme.colorScheme.primary
-                      : theme.iconTheme.color?.withValues(alpha: 0.7),
+                      : theme.iconTheme.color?.withOpacity(0.7),
                 ),
                 onPressed: widget.onRepeatToggled,
                 iconSize: 28,
@@ -260,9 +253,22 @@ class _NowPlayingPageState extends State<NowPlayingPage>
             ],
           ),
 
-          const Spacer(flex: 2),
+          const Spacer(flex: 1),
         ],
       ),
     );
+  }
+
+  IconData _getRepeatIcon(LoopMode mode) {
+    switch (mode) {
+      case LoopMode.off:
+        return Icons.repeat;
+      case LoopMode.all:
+        return Icons.repeat;
+      case LoopMode.one:
+        return Icons.repeat_one;
+      default:
+        return Icons.repeat;
+    }
   }
 }
