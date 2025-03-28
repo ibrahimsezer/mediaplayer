@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:mediaplayer/model/song_model.dart';
@@ -66,27 +68,65 @@ class AudioService {
       {int initialIndex = 0}) async {
     if (songs.isEmpty) return;
 
-    final playlist = ConcatenatingAudioSource(
-      children: songs
-          .map(
-            (song) => AudioSource.uri(
-              Uri.parse('file://${song.filePath}'),
-              tag: MediaItem(
-                id: song.id,
-                title: song.title,
-                artist: song.artist,
-                album: song.album,
-                artUri: song.albumArt.isNotEmpty
-                    ? Uri.parse('file://${song.albumArt}')
-                    : null,
-                duration: song.duration,
-              ),
-            ),
-          )
-          .toList(),
-    );
+    try {
+      log('Setting playlist with ${songs.length} songs, initial index: $initialIndex');
 
-    await _audioPlayer.setAudioSource(playlist, initialIndex: initialIndex);
+      // Filter out songs with invalid file paths
+      final validSongs = songs.where((song) {
+        final songFile = Uri.file(song.filePath).toFilePath();
+        final isValid = songFile.isNotEmpty;
+        if (!isValid) {
+          log('Invalid song file path: ${song.filePath}');
+        }
+        return isValid;
+      }).toList();
+
+      if (validSongs.isEmpty) {
+        log('No valid songs in playlist');
+        return;
+      }
+
+      // Make sure initialIndex is valid for the filtered list
+      if (initialIndex >= validSongs.length) {
+        initialIndex = 0;
+      }
+
+      log('Creating audio source with ${validSongs.length} valid songs');
+      final playlist = ConcatenatingAudioSource(
+        children: validSongs
+            .map(
+              (song) => AudioSource.uri(
+                Uri.file(song.filePath),
+                tag: MediaItem(
+                  id: song.id,
+                  title: song.title,
+                  artist: song.artist,
+                  album: song.album,
+                  artUri:
+                      song.albumArt.isNotEmpty ? Uri.file(song.albumArt) : null,
+                  duration: song.duration,
+                ),
+              ),
+            )
+            .toList(),
+      );
+
+      log('Setting audio source...');
+      // Set a timeout for the operation
+      await _audioPlayer
+          .setAudioSource(playlist, initialIndex: initialIndex)
+          .timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          log('Timeout setting audio source');
+          throw Exception('Timeout setting audio source');
+        },
+      );
+      log('Audio source set successfully');
+    } catch (e) {
+      log('Error setting playlist: $e');
+      // Just log the error but don't rethrow to prevent crashes
+    }
   }
 
   // Play/pause toggle
@@ -100,51 +140,87 @@ class AudioService {
 
   // Play
   Future<void> play() async {
-    await _audioPlayer.play();
+    try {
+      await _audioPlayer.play();
+    } catch (e) {
+      log('Error playing: $e');
+    }
   }
 
   // Pause
   Future<void> pause() async {
-    await _audioPlayer.pause();
+    try {
+      await _audioPlayer.pause();
+    } catch (e) {
+      log('Error pausing: $e');
+    }
   }
 
   // Stop
   Future<void> stop() async {
-    await _audioPlayer.stop();
+    try {
+      await _audioPlayer.stop();
+    } catch (e) {
+      log('Error stopping: $e');
+    }
   }
 
   // Skip to next song
   Future<void> next() async {
-    await _audioPlayer.seekToNext();
+    try {
+      await _audioPlayer.seekToNext();
+    } catch (e) {
+      log('Error skipping to next: $e');
+    }
   }
 
   // Skip to previous song
   Future<void> previous() async {
-    if (_audioPlayer.position > const Duration(seconds: 3)) {
-      await _audioPlayer.seek(Duration.zero);
-    } else {
-      await _audioPlayer.seekToPrevious();
+    try {
+      if (_audioPlayer.position > const Duration(seconds: 3)) {
+        await _audioPlayer.seek(Duration.zero);
+      } else {
+        await _audioPlayer.seekToPrevious();
+      }
+    } catch (e) {
+      log('Error skipping to previous: $e');
     }
   }
 
   // Seek to a specific position
   Future<void> seek(Duration position) async {
-    await _audioPlayer.seek(position);
+    try {
+      await _audioPlayer.seek(position);
+    } catch (e) {
+      log('Error seeking: $e');
+    }
   }
 
   // Seek to a specific index
   Future<void> seekToIndex(int index) async {
-    await _audioPlayer.seek(Duration.zero, index: index);
+    try {
+      await _audioPlayer.seek(Duration.zero, index: index);
+    } catch (e) {
+      log('Error seeking to index: $e');
+    }
   }
 
   // Set loop mode
   Future<void> setLoopMode(LoopMode mode) async {
-    await _audioPlayer.setLoopMode(mode);
+    try {
+      await _audioPlayer.setLoopMode(mode);
+    } catch (e) {
+      log('Error setting loop mode: $e');
+    }
   }
 
   // Set shuffle mode
   Future<void> setShuffleMode(bool enabled) async {
-    await _audioPlayer.setShuffleModeEnabled(enabled);
+    try {
+      await _audioPlayer.setShuffleModeEnabled(enabled);
+    } catch (e) {
+      log('Error setting shuffle mode: $e');
+    }
   }
 
   // Dispose
