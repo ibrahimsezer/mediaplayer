@@ -4,6 +4,11 @@ import 'package:mediaplayer/model/song_model.dart';
 import 'package:mediaplayer/view/widgets/album_card.dart';
 import 'package:mediaplayer/view/widgets/playlist_card.dart';
 import 'package:mediaplayer/view/widgets/song_tile.dart';
+import 'package:provider/provider.dart';
+import 'package:mediaplayer/theme/theme_provider.dart';
+import 'package:mediaplayer/viewmodel/audio_player_viewmodel.dart';
+import 'package:mediaplayer/viewmodel/library_viewmodel.dart';
+import 'package:mediaplayer/viewmodel/playlist_viewmodel.dart';
 
 class HomePage extends StatelessWidget {
   final Function(SongModel) onSongSelected;
@@ -46,6 +51,8 @@ class HomePage extends StatelessWidget {
                 ),
                 onPressed: () {
                   // Toggle theme
+                  Provider.of<ThemeProvider>(context, listen: false)
+                      .toggleTheme();
                 },
               ),
               IconButton(
@@ -77,67 +84,77 @@ class HomePage extends StatelessWidget {
             title: 'Recently Played',
             child: SizedBox(
               height: 80,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: SongModel.mockSongs.length > 5
-                    ? 5
-                    : SongModel.mockSongs.length,
-                itemBuilder: (context, index) {
-                  final song = SongModel.mockSongs[index];
-                  return Container(
-                    width: 280,
-                    margin: const EdgeInsets.only(right: 16),
-                    child: Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => onSongSelected(song),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(
-                                  song.albumArt,
-                                  width: 64,
-                                  height: 64,
-                                  fit: BoxFit.cover,
+              child: Consumer<AudioPlayerViewModel>(
+                  builder: (context, audioViewModel, child) {
+                final recentSongs = audioViewModel.recentlyPlayedSongs;
+
+                if (recentSongs.isEmpty) {
+                  return const Center(
+                    child: Text('No recently played songs'),
+                  );
+                }
+
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: recentSongs.length > 5 ? 5 : recentSongs.length,
+                  itemBuilder: (context, index) {
+                    final song = recentSongs[index];
+                    return Container(
+                      width: 280,
+                      margin: const EdgeInsets.only(right: 16),
+                      child: Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => onSongSelected(song),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.asset(
+                                    song.albumArt,
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      song.title,
-                                      style: theme.textTheme.titleMedium,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      song.artist,
-                                      style: theme.textTheme.bodyMedium,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        song.title,
+                                        style: theme.textTheme.titleMedium,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        song.artist,
+                                        style: theme.textTheme.bodyMedium,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                );
+              }),
             ),
           ),
 
@@ -150,22 +167,33 @@ class HomePage extends StatelessWidget {
             },
             child: SizedBox(
               height: 180,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: PlaylistModel.mockPlaylists.length,
-                itemBuilder: (context, index) {
-                  final playlist = PlaylistModel.mockPlaylists[index];
-                  return Container(
-                    margin: const EdgeInsets.only(right: 16),
-                    child: PlaylistCard(
-                      playlist: playlist,
-                      onTap: () => onPlaylistSelected(playlist),
-                      isHorizontal: true,
-                    ),
+              child: Consumer<PlaylistViewModel>(
+                  builder: (context, playlistViewModel, child) {
+                final playlists = playlistViewModel.playlists;
+
+                if (playlists.isEmpty) {
+                  return const Center(
+                    child: Text('No playlists found'),
                   );
-                },
-              ),
+                }
+
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: playlists.length,
+                  itemBuilder: (context, index) {
+                    final playlist = playlists[index];
+                    return Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      child: PlaylistCard(
+                        playlist: playlist,
+                        onTap: () => onPlaylistSelected(playlist),
+                        isHorizontal: true,
+                      ),
+                    );
+                  },
+                );
+              }),
             ),
           ),
 
@@ -175,23 +203,43 @@ class HomePage extends StatelessWidget {
             title: 'Recommended Albums',
             child: SizedBox(
               height: 220,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: SongModel.mockSongs.length,
-                itemBuilder: (context, index) {
-                  final song = SongModel.mockSongs[index];
-                  return Container(
-                    margin: const EdgeInsets.only(right: 16),
-                    child: AlbumCard(
-                      title: song.album,
-                      artist: song.artist,
-                      coverArt: song.albumArt,
-                      onTap: () {},
-                    ),
+              child: Consumer<LibraryViewModel>(
+                  builder: (context, libraryViewModel, child) {
+                final albums = libraryViewModel.allAlbums;
+
+                if (albums.isEmpty) {
+                  return const Center(
+                    child: Text('No albums found'),
                   );
-                },
-              ),
+                }
+
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: albums.length,
+                  itemBuilder: (context, index) {
+                    final album = albums[index];
+                    final songs = libraryViewModel.getSongsByAlbum(album);
+                    final representative = songs.first;
+
+                    return Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      child: AlbumCard(
+                        title: album,
+                        artist: representative.artist,
+                        coverArt: representative.albumArt,
+                        onTap: () {
+                          // Play album
+                          final audioViewModel =
+                              Provider.of<AudioPlayerViewModel>(context,
+                                  listen: false);
+                          audioViewModel.loadPlaylist(songs);
+                        },
+                      ),
+                    );
+                  },
+                );
+              }),
             ),
           ),
 
