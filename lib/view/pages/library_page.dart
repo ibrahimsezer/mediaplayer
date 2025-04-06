@@ -228,7 +228,14 @@ class _LibraryPageState extends State<LibraryPage>
           song: song,
           isPlaying: audioPlayerViewModel.currentSong?.id == song.id &&
               audioPlayerViewModel.isPlaying,
-          onTap: () => widget.onSongSelected(song),
+          onTap: () {
+            // When a song is selected from the library, load the entire library as playlist
+            audioPlayerViewModel.loadPlaylist(
+              libraryViewModel.allSongs,
+              initialIndex: index,
+            );
+            widget.onSongSelected(song);
+          },
         );
       },
     );
@@ -459,8 +466,12 @@ class _LibraryPageState extends State<LibraryPage>
                         audioPlayerViewModel.currentSong?.id == song.id &&
                             audioPlayerViewModel.isPlaying,
                     onTap: () {
+                      // When a song is selected from an album, load the album as playlist
+                      audioPlayerViewModel.loadPlaylist(
+                        songs,
+                        initialIndex: index,
+                      );
                       widget.onSongSelected(song);
-                      audioPlayerViewModel.playSong(song);
                       Navigator.pop(context);
                     },
                   );

@@ -55,6 +55,15 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
     final audioPlayerViewModel = Provider.of<AudioPlayerViewModel>(context);
+    final currentSong = audioPlayerViewModel.currentSong ?? widget.song;
+
+    // Repeat mode'a göre next/previous butonlarının davranışını kontrol et
+    final canGoNext = audioPlayerViewModel.loopMode == LoopMode.off
+        ? audioPlayerViewModel.hasNextSong
+        : true;
+    final canGoPrevious = audioPlayerViewModel.loopMode == LoopMode.off
+        ? audioPlayerViewModel.hasPreviousSong
+        : true;
 
     return Scaffold(
       appBar: AppBar(
@@ -77,7 +86,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
 
           // Album Art
           Hero(
-            tag: 'album_art_${widget.song.id}',
+            tag: 'album_art_${currentSong.id}',
             child: Container(
               width: size.width * 0.8,
               height: size.width * 0.8,
@@ -103,12 +112,12 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                           );
                         },
                         child: Image.asset(
-                          widget.song.albumArt,
+                          currentSong.albumArt,
                           fit: BoxFit.cover,
                         ),
                       )
                     : Image.asset(
-                        widget.song.albumArt,
+                        currentSong.albumArt,
                         fit: BoxFit.cover,
                       ),
               ),
@@ -123,7 +132,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
             child: Column(
               children: [
                 Text(
-                  widget.song.title,
+                  currentSong.title,
                   style: theme.textTheme.titleLarge,
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -131,7 +140,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  widget.song.artist,
+                  currentSong.artist,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: theme.textTheme.titleSmall?.color?.withOpacity(0.7),
                   ),
@@ -141,7 +150,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  widget.song.album,
+                  currentSong.album,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
                   ),
@@ -199,8 +208,11 @@ class _NowPlayingPageState extends State<NowPlayingPage>
               // Previous button
               IconButton(
                 icon: const Icon(Icons.skip_previous),
-                onPressed: widget.onPreviousPressed,
+                onPressed: canGoPrevious ? widget.onPreviousPressed : null,
                 iconSize: 42,
+                color: canGoPrevious
+                    ? null
+                    : theme.iconTheme.color?.withOpacity(0.3),
               ),
 
               const SizedBox(width: 12),
@@ -233,8 +245,10 @@ class _NowPlayingPageState extends State<NowPlayingPage>
               // Next button
               IconButton(
                 icon: const Icon(Icons.skip_next),
-                onPressed: widget.onNextPressed,
+                onPressed: canGoNext ? widget.onNextPressed : null,
                 iconSize: 42,
+                color:
+                    canGoNext ? null : theme.iconTheme.color?.withOpacity(0.3),
               ),
 
               const SizedBox(width: 12),
@@ -247,7 +261,13 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                       ? theme.colorScheme.primary
                       : theme.iconTheme.color?.withOpacity(0.7),
                 ),
-                onPressed: widget.onRepeatToggled,
+                onPressed: () {
+                  widget.onRepeatToggled();
+                  // Repeat mode değiştiğinde mevcut şarkıyı tekrar yükle
+                  if (audioPlayerViewModel.loopMode == LoopMode.one) {
+                    audioPlayerViewModel.reloadCurrentSong();
+                  }
+                },
                 iconSize: 28,
               ),
             ],

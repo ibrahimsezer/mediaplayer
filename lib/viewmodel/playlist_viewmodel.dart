@@ -216,6 +216,12 @@ class PlaylistViewModel extends ChangeNotifier {
     return _playlistRepository.searchPlaylists(query);
   }
 
+  // Get songs from a playlist
+  List<SongModel> getPlaylistSongs(String playlistId) {
+    final playlist = _playlistRepository.getPlaylistById(playlistId);
+    return playlist?.songs ?? [];
+  }
+
   // Set loading state
   void _setLoading(bool isLoading) {
     _isLoading = isLoading;
