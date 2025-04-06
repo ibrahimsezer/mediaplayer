@@ -61,6 +61,23 @@ class AudioPlayerViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Current song index in playlist
+  int get currentIndex => _playlist.indexWhere((s) => s.id == _currentSong?.id);
+
+  // Check if there is a next song available
+  bool get hasNextSong {
+    if (_playlist.isEmpty) return false;
+    if (_loopMode != LoopMode.off) return true;
+    return currentIndex < _playlist.length - 1;
+  }
+
+  // Check if there is a previous song available
+  bool get hasPreviousSong {
+    if (_playlist.isEmpty) return false;
+    if (_loopMode != LoopMode.off) return true;
+    return currentIndex > 0;
+  }
+
   // Initialize the audio player
   Future<void> init() async {
     await _audioService.init();
@@ -174,8 +191,39 @@ class AudioPlayerViewModel extends ChangeNotifier {
   // Skip to next song
   Future<void> skipToNext() async {
     try {
-      await _audioService.next();
-      _updateCurrentSong();
+      if (_playlist.isEmpty || _currentSong == null) return;
+
+      final currentIdx = currentIndex;
+      if (currentIdx < 0) return;
+
+      switch (_loopMode) {
+        case LoopMode.off:
+          // No repeat mode: Stop at the end
+          if (currentIdx >= _playlist.length - 1) return;
+          await _audioService.next();
+          _currentSong = _playlist[currentIdx + 1];
+          break;
+
+        case LoopMode.one:
+          // Repeat one: Just restart current song
+          await reloadCurrentSong();
+          return;
+
+        case LoopMode.all:
+          // Repeat all: Wrap around to beginning
+          final nextIdx = (currentIdx + 1) % _playlist.length;
+          if (nextIdx == 0) {
+            // If we're wrapping to the start, explicitly set the index
+            await _audioService.seekToIndex(0);
+          } else {
+            await _audioService.next();
+          }
+          _currentSong = _playlist[nextIdx];
+          break;
+      }
+
+      _addToRecentlyPlayed(_currentSong!);
+      notifyListeners();
     } catch (e) {
       log('Error skipping to next: $e');
     }
@@ -184,8 +232,40 @@ class AudioPlayerViewModel extends ChangeNotifier {
   // Skip to previous song
   Future<void> skipToPrevious() async {
     try {
-      await _audioService.previous();
-      _updateCurrentSong();
+      if (_playlist.isEmpty || _currentSong == null) return;
+
+      final currentIdx = currentIndex;
+      if (currentIdx < 0) return;
+
+      switch (_loopMode) {
+        case LoopMode.off:
+          // No repeat mode: Stop at the beginning
+          if (currentIdx <= 0) return;
+          await _audioService.previous();
+          _currentSong = _playlist[currentIdx - 1];
+          break;
+
+        case LoopMode.one:
+          // Repeat one: Just restart current song
+          await reloadCurrentSong();
+          return;
+
+        case LoopMode.all:
+          // Repeat all: Wrap around to end
+          final prevIdx =
+              (currentIdx - 1 + _playlist.length) % _playlist.length;
+          if (prevIdx == _playlist.length - 1) {
+            // If we're wrapping to the end, explicitly set the index
+            await _audioService.seekToIndex(prevIdx);
+          } else {
+            await _audioService.previous();
+          }
+          _currentSong = _playlist[prevIdx];
+          break;
+      }
+
+      _addToRecentlyPlayed(_currentSong!);
+      notifyListeners();
     } catch (e) {
       log('Error skipping to previous: $e');
     }
@@ -200,20 +280,29 @@ class AudioPlayerViewModel extends ChangeNotifier {
 
   // Change loop mode
   Future<void> changeLoopMode() async {
-    switch (_loopMode) {
-      case LoopMode.off:
-        _loopMode = LoopMode.all;
-        break;
-      case LoopMode.all:
-        _loopMode = LoopMode.one;
-        break;
-      case LoopMode.one:
-        _loopMode = LoopMode.off;
-        break;
-    }
+    try {
+      switch (_loopMode) {
+        case LoopMode.off:
+          _loopMode = LoopMode.all;
+          break;
+        case LoopMode.all:
+          _loopMode = LoopMode.one;
+          // When switching to repeat one, ensure we're properly set up
+          if (_currentSong != null) {
+            await _audioService.setLoopMode(_loopMode);
+            await reloadCurrentSong();
+          }
+          break;
+        case LoopMode.one:
+          _loopMode = LoopMode.off;
+          break;
+      }
 
-    await _audioService.setLoopMode(_loopMode);
-    notifyListeners();
+      await _audioService.setLoopMode(_loopMode);
+      notifyListeners();
+    } catch (e) {
+      log('Error changing loop mode: $e');
+    }
   }
 
   // Update the current song based on the player's index
@@ -266,6 +355,24 @@ class AudioPlayerViewModel extends ChangeNotifier {
     } catch (e) {
       log('Error playing song in current playlist: $e');
       // Don't rethrow to prevent app freezes
+    }
+  }
+
+  // Reload current song (useful for repeat one mode)
+  Future<void> reloadCurrentSong() async {
+    if (_currentSong == null) return;
+
+    try {
+      final index = currentIndex;
+      if (index >= 0) {
+        // First ensure we're in the right mode
+        await _audioService.setLoopMode(LoopMode.one);
+        // Then seek to the start of the current song
+        await _audioService.seek(Duration.zero);
+        await _audioService.play();
+      }
+    } catch (e) {
+      log('Error reloading current song: $e');
     }
   }
 
