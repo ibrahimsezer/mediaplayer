@@ -11,9 +11,7 @@ import 'package:mediaplayer/view/pages/playlists_page.dart';
 import 'package:mediaplayer/view/pages/search_page.dart';
 import 'package:mediaplayer/view/widgets/mini_player.dart';
 import 'package:provider/provider.dart';
-import 'package:mediaplayer/theme/theme_provider.dart';
 import 'package:mediaplayer/viewmodel/audio_player_viewmodel.dart';
-import 'package:mediaplayer/viewmodel/playlist_viewmodel.dart';
 
 class PlayerView extends StatefulWidget {
   const PlayerView({super.key});
@@ -89,11 +87,13 @@ class _PlayerViewState extends State<PlayerView> {
           }
         }).catchError((e) {
           log('Error starting playback after playlist selection: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to play playlist: ${e.toString()}'),
-            ),
-          );
+          (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to play playlist: ${e.toString()}'),
+              ),
+            );
+          };
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -155,7 +155,7 @@ class _PlayerViewState extends State<PlayerView> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    //final themeProvider = Provider.of<ThemeProvider>(context);
     final audioPlayerViewModel = Provider.of<AudioPlayerViewModel>(context);
 
     return Scaffold(

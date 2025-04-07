@@ -3,7 +3,6 @@ import 'package:mediaplayer/model/playlist_model.dart';
 import 'package:mediaplayer/model/song_model.dart';
 import 'package:mediaplayer/view/widgets/album_card.dart';
 import 'package:mediaplayer/view/widgets/playlist_card.dart';
-import 'package:mediaplayer/view/widgets/song_tile.dart';
 import 'package:provider/provider.dart';
 import 'package:mediaplayer/theme/theme_provider.dart';
 import 'package:mediaplayer/viewmodel/audio_player_viewmodel.dart';

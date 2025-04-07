@@ -135,13 +135,15 @@ class _PlaylistDetailPageState extends State<PlaylistDetailPage> {
                                               currentPlaylist.songs.first);
                                         }
                                       }).catchError((e) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                'Error starting playback: $e'),
-                                          ),
-                                        );
+                                        (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                  'Error starting playback: $e'),
+                                            ),
+                                          );
+                                        };
                                       });
                                     } catch (e) {
                                       log('Error playing playlist: $e');

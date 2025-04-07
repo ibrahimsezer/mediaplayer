@@ -186,7 +186,9 @@ class PlaylistsPage extends StatelessWidget {
                   description: descriptionController.text.trim(),
                 );
                 if (playlist != null) {
-                  Navigator.pop(context);
+                  (mounted) {
+                    Navigator.pop(context);
+                  };
                 }
               }
             },

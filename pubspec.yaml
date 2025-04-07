@@ -1,5 +1,5 @@
 name: mediaplayer
-description: "A new Flutter project."
+description: "A Music Player from SezerMind."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -44,6 +44,7 @@ dependencies:
   just_audio_background: ^0.0.1-beta.15
   audio_metadata_reader: ^1.1.0
   google_fonts: ^6.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

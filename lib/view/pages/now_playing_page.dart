@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mediaplayer/const/app_constants.dart';
-import 'package:mediaplayer/helper/format_helper.dart';
 import 'package:mediaplayer/model/song_model.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:provider/provider.dart';
@@ -17,7 +16,7 @@ class NowPlayingPage extends StatefulWidget {
   final VoidCallback onRepeatToggled;
 
   const NowPlayingPage({
-    Key? key,
+    super.key,
     required this.song,
     required this.isPlaying,
     required this.onPlayPausePressed,
@@ -25,7 +24,7 @@ class NowPlayingPage extends StatefulWidget {
     required this.onPreviousPressed,
     required this.onShuffleToggled,
     required this.onRepeatToggled,
-  }) : super(key: key);
+  });
 
   @override
   State<NowPlayingPage> createState() => _NowPlayingPageState();
@@ -94,7 +93,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -142,7 +141,8 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 Text(
                   currentSong.artist,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.textTheme.titleSmall?.color?.withOpacity(0.7),
+                    color: theme.textTheme.titleSmall?.color
+                        ?.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -152,7 +152,8 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 Text(
                   currentSong.album,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                    color: theme.textTheme.bodyMedium?.color
+                        ?.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -172,8 +173,9 @@ class _NowPlayingPageState extends State<NowPlayingPage>
               buffered: audioPlayerViewModel.bufferedPosition,
               total: audioPlayerViewModel.duration,
               progressBarColor: theme.colorScheme.primary,
-              baseBarColor: theme.colorScheme.primary.withOpacity(0.2),
-              bufferedBarColor: theme.colorScheme.primary.withOpacity(0.5),
+              baseBarColor: theme.colorScheme.primary.withValues(alpha: 0.2),
+              bufferedBarColor:
+                  theme.colorScheme.primary.withValues(alpha: 0.5),
               thumbColor: theme.colorScheme.primary,
               barHeight: 4.0,
               thumbRadius: 7.0,
@@ -189,6 +191,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
 
           // Playback Controls
           Row(
+            mainAxisSize: MainAxisSize.min, //Added for all device
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Shuffle button
@@ -197,7 +200,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                   Icons.shuffle,
                   color: audioPlayerViewModel.shuffleModeEnabled
                       ? theme.colorScheme.primary
-                      : theme.iconTheme.color?.withOpacity(0.7),
+                      : theme.iconTheme.color?.withValues(alpha: 0.7),
                 ),
                 onPressed: widget.onShuffleToggled,
                 iconSize: 28,
@@ -212,7 +215,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 iconSize: 42,
                 color: canGoPrevious
                     ? null
-                    : theme.iconTheme.color?.withOpacity(0.3),
+                    : theme.iconTheme.color?.withValues(alpha: 0.3),
               ),
 
               const SizedBox(width: 12),
@@ -223,7 +226,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 ),
                 child: IconButton(
                   icon: AnimatedSwitcher(
@@ -247,8 +250,9 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                 icon: const Icon(Icons.skip_next),
                 onPressed: canGoNext ? widget.onNextPressed : null,
                 iconSize: 42,
-                color:
-                    canGoNext ? null : theme.iconTheme.color?.withOpacity(0.3),
+                color: canGoNext
+                    ? null
+                    : theme.iconTheme.color?.withValues(alpha: 0.3),
               ),
 
               const SizedBox(width: 12),
@@ -259,7 +263,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                   _getRepeatIcon(audioPlayerViewModel.loopMode),
                   color: audioPlayerViewModel.loopMode != LoopMode.off
                       ? theme.colorScheme.primary
-                      : theme.iconTheme.color?.withOpacity(0.7),
+                      : theme.iconTheme.color?.withValues(alpha: 0.7),
                 ),
                 onPressed: () {
                   widget.onRepeatToggled();
@@ -287,8 +291,6 @@ class _NowPlayingPageState extends State<NowPlayingPage>
         return Icons.repeat;
       case LoopMode.one:
         return Icons.repeat_one;
-      default:
-        return Icons.repeat;
     }
   }
 }

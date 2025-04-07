@@ -164,7 +164,7 @@ class FileScannerService {
       }
 
       // Extract the filename and use it as title if metadata is not available
-      final fileName = path.basename(filePath);
+      //final fileName = path.basename(filePath);
       final title = _extractTitleFromPath(filePath);
 
       log('Extracted title: $title');

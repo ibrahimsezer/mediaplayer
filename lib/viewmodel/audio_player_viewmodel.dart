@@ -306,13 +306,13 @@ class AudioPlayerViewModel extends ChangeNotifier {
   }
 
   // Update the current song based on the player's index
-  void _updateCurrentSong() {
+  /*void _updateCurrentSong() {
     final index = _audioService.currentIndex;
     if (index != null && index >= 0 && index < _playlist.length) {
       _currentSong = _playlist[index];
       notifyListeners();
     }
-  }
+  }*/
 
   // Add a song to recently played list
   void _addToRecentlyPlayed(SongModel song) {

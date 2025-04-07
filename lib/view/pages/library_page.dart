@@ -13,12 +13,12 @@ class LibraryPage extends StatefulWidget {
   final VoidCallback onViewAllArtistsPressed;
 
   const LibraryPage({
-    Key? key,
+    super.key,
     required this.onSongSelected,
     required this.onViewAllSongsPressed,
     required this.onViewAllAlbumsPressed,
     required this.onViewAllArtistsPressed,
-  }) : super(key: key);
+  });
 
   @override
   State<LibraryPage> createState() => _LibraryPageState();
