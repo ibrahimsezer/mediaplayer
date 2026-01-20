@@ -10,13 +10,13 @@ class MiniPlayer extends StatelessWidget {
   final VoidCallback onNext;
 
   const MiniPlayer({
-    Key? key,
+    super.key,
     required this.song,
     required this.isPlaying,
     required this.onTap,
     required this.onPlayPause,
     required this.onNext,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -3,17 +3,16 @@ import 'package:mediaplayer/model/playlist_model.dart';
 import 'package:mediaplayer/model/song_model.dart';
 import 'package:mediaplayer/view/widgets/album_card.dart';
 import 'package:mediaplayer/view/widgets/playlist_card.dart';
-import 'package:mediaplayer/view/widgets/song_tile.dart';
 
 class HomePage extends StatelessWidget {
   final Function(SongModel) onSongSelected;
   final Function(PlaylistModel) onPlaylistSelected;
 
   const HomePage({
-    Key? key,
+    super.key,
     required this.onSongSelected,
     required this.onPlaylistSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +31,7 @@ class HomePage extends StatelessWidget {
                 'Rhythm',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onBackground,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
@@ -42,7 +41,7 @@ class HomePage extends StatelessWidget {
               IconButton(
                 icon: Icon(
                   Icons.brightness_4,
-                  color: theme.colorScheme.onBackground,
+                  color: theme.colorScheme.onSurface,
                 ),
                 onPressed: () {
                   // Toggle theme
@@ -51,7 +50,7 @@ class HomePage extends StatelessWidget {
               IconButton(
                 icon: Icon(
                   Icons.settings,
-                  color: theme.colorScheme.onBackground,
+                  color: theme.colorScheme.onSurface,
                 ),
                 onPressed: () {
                   // Open settings
@@ -227,11 +226,11 @@ class HomePage extends StatelessWidget {
                 if (viewAllAction != null)
                   TextButton(
                     onPressed: viewAllAction,
-                    child: Text('View All'),
                     style: TextButton.styleFrom(
                       foregroundColor: theme.colorScheme.primary,
                       textStyle: theme.textTheme.labelLarge,
                     ),
+                    child: Text('View All'),
                   ),
               ],
             ),

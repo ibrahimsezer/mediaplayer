@@ -8,13 +8,13 @@ class AlbumCard extends StatelessWidget {
   final double size;
 
   const AlbumCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.artist,
     required this.coverArt,
     required this.onTap,
     this.size = 148,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

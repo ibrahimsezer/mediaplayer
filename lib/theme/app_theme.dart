@@ -41,7 +41,7 @@ class AppTheme {
       ),
     ),
     // Card Theme
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0, // Flatter design
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: lightSurfaceColor,
@@ -73,7 +73,7 @@ class AppTheme {
     // Navigation Bar Theme
     navigationBarTheme: NavigationBarThemeData(
       indicatorColor: primaryColor.withValues(alpha: 0.2),
-      labelTextStyle: MaterialStateProperty.all(
+      labelTextStyle: WidgetStateProperty.all(
         GoogleFonts.poppins(
           fontSize: 12,
           fontWeight: FontWeight.w500,
@@ -98,7 +98,6 @@ class AppTheme {
       primary: primaryColor,
       secondary: secondaryColor,
       tertiary: accentColor,
-      background: darkBackground,
       surface: darkSurfaceColor,
     ),
     scaffoldBackgroundColor: darkBackground,
@@ -126,7 +125,7 @@ class AppTheme {
           ),
     ),
     // Card Theme
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       elevation: 0, // Flatter design
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: darkSurfaceColor,
@@ -158,7 +157,7 @@ class AppTheme {
     // Navigation Bar Theme
     navigationBarTheme: NavigationBarThemeData(
       indicatorColor: primaryColor.withValues(alpha: 0.3),
-      labelTextStyle: MaterialStateProperty.all(
+      labelTextStyle: WidgetStateProperty.all(
         GoogleFonts.poppins(
           fontSize: 12,
           fontWeight: FontWeight.w500,

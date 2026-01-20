@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mediaplayer/const/app_constants.dart';
-import 'package:mediaplayer/helper/format_helper.dart';
 import 'package:mediaplayer/model/song_model.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 
@@ -16,7 +15,7 @@ class NowPlayingPage extends StatefulWidget {
   final bool isRepeatEnabled;
 
   const NowPlayingPage({
-    Key? key,
+    super.key,
     required this.song,
     required this.isPlaying,
     required this.onPlayPausePressed,
@@ -26,7 +25,7 @@ class NowPlayingPage extends StatefulWidget {
     required this.onRepeatToggled,
     this.isShuffleEnabled = false,
     this.isRepeatEnabled = false,
-  }) : super(key: key);
+  });
 
   @override
   State<NowPlayingPage> createState() => _NowPlayingPageState();

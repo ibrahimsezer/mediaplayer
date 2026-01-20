@@ -7,9 +7,9 @@ class SearchPage extends StatefulWidget {
   final Function(SongModel) onSongSelected;
 
   const SearchPage({
-    Key? key,
+    super.key,
     required this.onSongSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -287,11 +287,11 @@ class _SearchPageState extends State<SearchPage> {
         onPressed: () {
           // Navigate to full list
         },
-        child: Text('View all $type'),
         style: TextButton.styleFrom(
           foregroundColor: theme.colorScheme.primary,
           textStyle: theme.textTheme.labelLarge,
         ),
+        child: Text('View all $type'),
       ),
     );
   }

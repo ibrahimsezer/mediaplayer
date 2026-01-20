@@ -10,12 +10,12 @@ class LibraryPage extends StatefulWidget {
   final VoidCallback onViewAllArtistsPressed;
 
   const LibraryPage({
-    Key? key,
+    super.key,
     required this.onSongSelected,
     required this.onViewAllSongsPressed,
     required this.onViewAllAlbumsPressed,
     required this.onViewAllArtistsPressed,
-  }) : super(key: key);
+  });
 
   @override
   State<LibraryPage> createState() => _LibraryPageState();
@@ -83,8 +83,6 @@ class _LibraryPageState extends State<LibraryPage>
   }
 
   Widget _buildSongsTab() {
-    final theme = Theme.of(context);
-
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 80), // Space for mini player
       itemCount: SongModel.mockSongs.length,

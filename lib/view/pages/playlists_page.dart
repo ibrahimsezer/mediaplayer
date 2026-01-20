@@ -7,10 +7,10 @@ class PlaylistsPage extends StatelessWidget {
   final VoidCallback onCreatePlaylistPressed;
 
   const PlaylistsPage({
-    Key? key,
+    super.key,
     required this.onPlaylistSelected,
     required this.onCreatePlaylistPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

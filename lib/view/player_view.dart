@@ -8,8 +8,7 @@ import 'package:mediaplayer/view/pages/now_playing_page.dart';
 import 'package:mediaplayer/view/pages/playlists_page.dart';
 import 'package:mediaplayer/view/pages/search_page.dart';
 import 'package:mediaplayer/view/widgets/mini_player.dart';
-import 'package:provider/provider.dart';
-import 'package:mediaplayer/theme/theme_provider.dart';
+
 
 class PlayerView extends StatefulWidget {
   const PlayerView({super.key});
@@ -137,7 +136,6 @@ class _PlayerViewState extends State<PlayerView> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
       body: IndexedStack(

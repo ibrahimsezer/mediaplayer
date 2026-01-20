@@ -8,11 +8,11 @@ class PlaylistCard extends StatelessWidget {
   final bool isHorizontal;
 
   const PlaylistCard({
-    Key? key,
+    super.key,
     required this.playlist,
     required this.onTap,
     this.isHorizontal = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
